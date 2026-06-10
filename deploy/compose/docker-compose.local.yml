@@ -1,0 +1,65 @@
+services:
+  # AUTH 
+  auth-db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${AUTH_STORAGE_USER}
+      POSTGRES_PASSWORD: ${AUTH_STORAGE_PASSWORD}
+      POSTGRES_DB: ${AUTH_STORAGE_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - auth_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_STORAGE_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  auth-migrate:
+    image: migrate/migrate
+    depends_on:
+      auth-db:
+        condition: service_healthy
+
+    volumes:
+      - ../../services/auth/migrations:/migrations
+    command:
+      [
+        "-path", "/migrations",
+        "-database",
+        "postgres://${AUTH_STORAGE_USER}:${AUTH_STORAGE_PASSWORD}@auth-db:${AUTH_STORAGE_PORT}/${AUTH_STORAGE_NAME}?sslmode=${AUTH_STORAGE_SSLMODE}",
+        "up"
+      ]
+    restart: "no"
+    environment:
+      AUTH_STORAGE_USER: ${AUTH_STORAGE_USER}
+      AUTH_STORAGE_PASSWORD: ${AUTH_STORAGE_PASSWORD}
+      AUTH_STORAGE_PORT: ${AUTH_STORAGE_PORT}
+      AUTH_STORAGE_HOST: ${AUTH_STORAGE_HOST}
+      AUTH_STORAGE_NAME: ${AUTH_STORAGE_NAME}
+      AUTH_STORAGE_SSLMODE: ${AUTH_STORAGE_SSLMODE}
+
+  auth-service:
+    build: 
+      context: ../../
+      dockerfile: services/auth/Dockerfile
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      auth-migrate:
+        condition: service_completed_successfully
+    environment:
+      AUTH_CONFIG_PATH: ${AUTH_CONFIG_PATH}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET}
+      AUTH_JWT_TTL: ${AUTH_JWT_TTL}
+      AUTH_STORAGE_USER: ${AUTH_STORAGE_USER}
+      AUTH_STORAGE_PASSWORD: ${AUTH_STORAGE_PASSWORD}
+      AUTH_STORAGE_PORT: ${AUTH_STORAGE_PORT}
+      AUTH_STORAGE_HOST: ${AUTH_STORAGE_HOST}
+      AUTH_STORAGE_NAME: ${AUTH_STORAGE_NAME}
+      AUTH_STORAGE_SSLMODE: ${AUTH_STORAGE_SSLMODE}
+    volumes:
+      - ../../services/auth/config:/app/config
+volumes:
+  auth_pgdata:
