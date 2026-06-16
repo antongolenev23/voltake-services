@@ -22,7 +22,7 @@ func main() {
 
 	a := app.New(cfg, log)
 	go a.MustRun()
-	
+
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 

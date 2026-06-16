@@ -1,5 +1,6 @@
 LOCAL_PATH := github.com/antongolenev23/voltake-services
 
+# PRE-COMMIT HOOKS
 .PHONY: fmt
 fmt:
 	@echo "Formatting all Go files..."
@@ -18,3 +19,20 @@ fmt-check:
 .PHONY: pre-commit
 pre-commit: fmt-check
 	@echo "Pre-commit checks passed"
+
+# AUTH TESTS
+COMPOSE=docker compose \
+	-f deploy/compose/docker-compose.local.yml \
+	-f deploy/compose/docker-compose.test.yml \
+	--env-file .env
+
+.PHONY: test-auth
+
+test-auth:
+	$(COMPOSE) down 
+
+	$(COMPOSE) up auth-db auth-migrate auth-service -d --wait --build
+
+	go test ./services/auth/tests/... -count=1 -parallel=16 -v
+
+	$(COMPOSE) down 

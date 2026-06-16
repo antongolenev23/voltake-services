@@ -5,17 +5,18 @@ import (
 	"errors"
 	"fmt"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/antongolenev23/voltake-services/services/auth/internal/config"
 	"github.com/antongolenev23/voltake-services/services/auth/internal/domain/models"
 	"github.com/antongolenev23/voltake-services/services/auth/internal/jwt"
 	"github.com/antongolenev23/voltake-services/services/auth/internal/storage"
-	"golang.org/x/crypto/bcrypt"
 )
 
 var (
 	ErrUserAlreadyExists = errors.New("user already exists")
-	ErrUserNotFound = errors.New("user not found")
-	ErrInvalidPassword = errors.New("invalid password")
+	ErrUserNotFound      = errors.New("user not found")
+	ErrInvalidPassword   = errors.New("invalid password")
 )
 
 type UserSaver interface {
@@ -31,8 +32,8 @@ type UserProvider interface {
 }
 
 type Auth struct {
-	jwtCfg *config.ConfigJWT
-	userSaver UserSaver
+	jwtCfg       *config.ConfigJWT
+	userSaver    UserSaver
 	UserProvider UserProvider
 }
 
@@ -43,8 +44,8 @@ func New(
 	userProvider UserProvider,
 ) *Auth {
 	return &Auth{
-		jwtCfg: jwtCfg,
-		userSaver: userSaver,
+		jwtCfg:       jwtCfg,
+		userSaver:    userSaver,
 		UserProvider: userProvider,
 	}
 }
@@ -79,7 +80,7 @@ func (a *Auth) Register(
 
 func (a *Auth) Login(
 	ctx context.Context,
-	email string,		
+	email string,
 	password string,
 ) (string, error) {
 	const op = "service.Login"
@@ -103,4 +104,3 @@ func (a *Auth) Login(
 
 	return token, nil
 }
-

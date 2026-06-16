@@ -8,7 +8,7 @@ import (
 
 const (
 	envLocal = "local"
-	envProd = "prod"
+	envProd  = "prod"
 )
 
 func MustInit(env string) *slog.Logger {

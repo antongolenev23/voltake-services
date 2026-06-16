@@ -3,8 +3,8 @@ package models
 import "github.com/google/uuid"
 
 type User struct {
-	Email string
+	Email    string
 	PassHash []byte
-	ID uuid.UUID
-	IsAdmin bool
+	ID       uuid.UUID
+	IsAdmin  bool
 }

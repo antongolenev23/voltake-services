@@ -7,11 +7,12 @@ import (
 	"net/mail"
 
 	authv1 "github.com/antongolenev23/voltake-protos/gen/go/auth/v1"
-	"github.com/antongolenev23/voltake-services/services/auth/internal/service"
 	passwordvalidator "github.com/wagslane/go-password-validator"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/antongolenev23/voltake-services/services/auth/internal/service"
 )
 
 type Auth interface {
@@ -29,15 +30,15 @@ type Auth interface {
 type serverAPI struct {
 	authv1.UnimplementedAuthServer
 	auth Auth
-	log *slog.Logger
+	log  *slog.Logger
 }
 
 func Register(gRPC *grpc.Server, auth Auth, log *slog.Logger) {
 	authv1.RegisterAuthServer(gRPC, &serverAPI{auth: auth, log: log})
 }
 
-func(s *serverAPI) Register(
-	ctx context.Context,  
+func (s *serverAPI) Register(
+	ctx context.Context,
 	req *authv1.Credentials,
 ) (*authv1.AuthResponse, error) {
 	const op = "grpc.Register"
@@ -45,7 +46,7 @@ func(s *serverAPI) Register(
 	log := s.log.With(
 		slog.String("op", op),
 	)
-	
+
 	if err := validateCredentials(req); err != nil {
 		log.Info("invalid credentials", slog.String("error", err.Error()))
 		return nil, err
@@ -66,8 +67,8 @@ func(s *serverAPI) Register(
 	}, nil
 }
 
-func(s *serverAPI) Login(
-	ctx context.Context,  
+func (s *serverAPI) Login(
+	ctx context.Context,
 	req *authv1.Credentials,
 ) (*authv1.AuthResponse, error) {
 	const op = "grpc.Login"
@@ -95,7 +96,7 @@ func validateCredentials(req *authv1.Credentials) error {
 	if _, err := mail.ParseAddress(req.GetEmail()); err != nil {
 		return status.Error(codes.InvalidArgument, "invalid email")
 	}
-	
+
 	if len(req.GetPassword()) > 72 {
 		return status.Error(codes.InvalidArgument, "password is too long")
 	}

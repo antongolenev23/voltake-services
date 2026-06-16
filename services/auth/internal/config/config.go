@@ -11,19 +11,19 @@ import (
 )
 
 type Config struct {
-	Env  string     `yaml:"env" env-required:"true"`
-	GRPC ConfigGRPC `yaml:"grpc"`
-	JWT  ConfigJWT
+	Env     string     `yaml:"env" env-required:"true"`
+	GRPC    ConfigGRPC `yaml:"grpc"`
+	JWT     ConfigJWT
 	Storage ConfigStorage
 }
 
 type ConfigStorage struct {
-	Host string `env:"AUTH_STORAGE_HOST" env-required:"true"`
-	Port int `env:"AUTH_STORAGE_PORT" env-required:"true"`
-	User string `env:"AUTH_STORAGE_USER" env-required:"true"`
+	Host     string `env:"AUTH_STORAGE_HOST" env-required:"true"`
+	Port     int    `env:"AUTH_STORAGE_PORT" env-required:"true"`
+	User     string `env:"AUTH_STORAGE_USER" env-required:"true"`
 	Password string `env:"AUTH_STORAGE_PASSWORD" env-required:"true"`
-	Name string `env:"AUTH_STORAGE_NAME" env-required:"true"`
-	SSLMode string `env:"AUTH_STORAGE_SSLMODE" env-required:"true"`
+	Name     string `env:"AUTH_STORAGE_NAME" env-required:"true"`
+	SSLMode  string `env:"AUTH_STORAGE_SSLMODE" env-required:"true"`
 }
 
 type ConfigGRPC struct {

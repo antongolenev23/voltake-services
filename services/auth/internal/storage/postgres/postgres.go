@@ -5,13 +5,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/antongolenev23/voltake-services/services/auth/internal/config"
-	"github.com/antongolenev23/voltake-services/services/auth/internal/domain/models"
-	"github.com/antongolenev23/voltake-services/services/auth/internal/storage"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/antongolenev23/voltake-services/services/auth/internal/config"
+	"github.com/antongolenev23/voltake-services/services/auth/internal/domain/models"
+	"github.com/antongolenev23/voltake-services/services/auth/internal/storage"
 )
 
 func NewPostgres(ctx context.Context, cfg *config.ConfigStorage) (*pgxpool.Pool, error) {
