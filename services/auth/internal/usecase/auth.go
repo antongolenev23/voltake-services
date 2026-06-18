@@ -1,4 +1,4 @@
-package service
+package usecase
 
 import (
 	"context"
@@ -8,45 +8,32 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/antongolenev23/voltake-services/services/auth/internal/config"
-	"github.com/antongolenev23/voltake-services/services/auth/internal/domain/models"
+	"github.com/antongolenev23/voltake-services/services/auth/internal/domain"
 	"github.com/antongolenev23/voltake-services/services/auth/internal/jwt"
-	"github.com/antongolenev23/voltake-services/services/auth/internal/storage"
 )
 
-var (
-	ErrUserAlreadyExists = errors.New("user already exists")
-	ErrUserNotFound      = errors.New("user not found")
-	ErrInvalidPassword   = errors.New("invalid password")
-)
-
-type UserSaver interface {
+type Storage interface {
 	SaveUser(
 		ctx context.Context,
 		email string,
 		passHash []byte,
-	) (models.User, error)
-}
+	) (domain.User, error)
 
-type UserProvider interface {
-	GetUser(ctx context.Context, email string) (models.User, error)
+	GetUser(ctx context.Context, email string) (domain.User, error)
 }
 
 type Auth struct {
-	jwtCfg       *config.ConfigJWT
-	userSaver    UserSaver
-	UserProvider UserProvider
+	jwtCfg  *config.ConfigJWT
+	storage Storage
 }
 
-// New returns a new instance of Auth service
 func New(
 	jwtCfg *config.ConfigJWT,
-	userSaver UserSaver,
-	userProvider UserProvider,
+	storage Storage,
 ) *Auth {
 	return &Auth{
-		jwtCfg:       jwtCfg,
-		userSaver:    userSaver,
-		UserProvider: userProvider,
+		jwtCfg:  jwtCfg,
+		storage: storage,
 	}
 }
 
@@ -62,10 +49,10 @@ func (a *Auth) Register(
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	user, err := a.userSaver.SaveUser(ctx, email, passHash)
+	user, err := a.storage.SaveUser(ctx, email, passHash)
 	if err != nil {
-		if errors.Is(err, storage.ErrUserAlreadyExists) {
-			return "", ErrUserAlreadyExists
+		if errors.Is(err, domain.ErrUserAlreadyExists) {
+			return "", err
 		}
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
@@ -85,16 +72,16 @@ func (a *Auth) Login(
 ) (string, error) {
 	const op = "service.Login"
 
-	user, err := a.UserProvider.GetUser(ctx, email)
+	user, err := a.storage.GetUser(ctx, email)
 	if err != nil {
-		if errors.Is(err, storage.ErrUserNotFound) {
-			return "", ErrUserNotFound
+		if errors.Is(err, domain.ErrUserNotFound) {
+			return "", err
 		}
 		return "", fmt.Errorf("%s, %w", op, err)
 	}
 
 	if err := bcrypt.CompareHashAndPassword(user.PassHash, []byte(password)); err != nil {
-		return "", ErrInvalidPassword
+		return "", domain.ErrInvalidPassword
 	}
 
 	token, err := jwt.GenerateToken(user, a.jwtCfg)

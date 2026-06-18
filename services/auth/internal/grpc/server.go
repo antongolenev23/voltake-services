@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/antongolenev23/voltake-services/services/auth/internal/service"
+	"github.com/antongolenev23/voltake-services/services/auth/internal/domain"
 )
 
 type Auth interface {
@@ -54,7 +54,7 @@ func (s *serverAPI) Register(
 
 	token, err := s.auth.Register(ctx, req.GetEmail(), req.GetPassword())
 	if err != nil {
-		if errors.Is(err, service.ErrUserAlreadyExists) {
+		if errors.Is(err, domain.ErrUserAlreadyExists) {
 			log.Info("can not register", slog.String("error", "user already exists"))
 			return nil, status.Error(codes.AlreadyExists, "user already exists")
 		}
@@ -79,7 +79,7 @@ func (s *serverAPI) Login(
 
 	token, err := s.auth.Login(ctx, req.GetEmail(), req.GetPassword())
 	if err != nil {
-		if errors.Is(err, service.ErrUserNotFound) || errors.Is(err, service.ErrInvalidPassword) {
+		if errors.Is(err, domain.ErrUserNotFound) || errors.Is(err, domain.ErrInvalidPassword) {
 			log.Info("can not login", slog.String("error", err.Error()))
 			return nil, status.Error(codes.Unauthenticated, "invalid credentials")
 		}

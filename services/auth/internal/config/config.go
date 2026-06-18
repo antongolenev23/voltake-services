@@ -32,16 +32,17 @@ type ConfigGRPC struct {
 }
 
 type ConfigJWT struct {
-	TTL    time.Duration `env:"AUTH_JWT_TTL" env-required:"true"`
-	Secret string        `env:"AUTH_JWT_SECRET" env-required:"true"`
+	TTL    time.Duration `env:"JWT_TTL" env-required:"true"`
+	Secret string        `env:"JWT_SECRET" env-required:"true"`
 }
 
 func MustLoad() *Config {
 	_ = godotenv.Load()
 
-	configPath, ok := os.LookupEnv("AUTH_CONFIG_PATH")
+	const configPathEnvVar = "AUTH_CONFIG_PATH"
+	configPath, ok := os.LookupEnv(configPathEnvVar)
 	if !ok {
-		log.Fatal("environment variable AUTH_CONFIG_PATH is not set")
+		log.Fatalf("environment variable %s is not set", configPathEnvVar)
 	}
 
 	absPath, err := filepath.Abs(configPath)

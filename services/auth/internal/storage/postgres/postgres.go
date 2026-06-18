@@ -11,11 +11,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/antongolenev23/voltake-services/services/auth/internal/config"
-	"github.com/antongolenev23/voltake-services/services/auth/internal/domain/models"
-	"github.com/antongolenev23/voltake-services/services/auth/internal/storage"
+	"github.com/antongolenev23/voltake-services/services/auth/internal/domain"
 )
 
-func NewPostgres(ctx context.Context, cfg *config.ConfigStorage) (*pgxpool.Pool, error) {
+func NewPgxpool(ctx context.Context, cfg *config.ConfigStorage) (*pgxpool.Pool, error) {
 	const op = "storage.NewPostgres"
 
 	connStr := fmt.Sprintf(
@@ -40,22 +39,22 @@ func NewPostgres(ctx context.Context, cfg *config.ConfigStorage) (*pgxpool.Pool,
 	return pool, nil
 }
 
-type Storage struct {
+type Postgres struct {
 	db *pgxpool.Pool
 }
 
-func New(db *pgxpool.Pool) *Storage {
-	return &Storage{db: db}
+func New(db *pgxpool.Pool) *Postgres {
+	return &Postgres{db: db}
 }
 
-func (s *Storage) SaveUser(
+func (s *Postgres) SaveUser(
 	ctx context.Context,
 	email string,
 	passHash []byte,
-) (models.User, error) {
+) (domain.User, error) {
 	const op = "postgres.SaveUser"
 
-	user := models.User{
+	user := domain.User{
 		ID:       uuid.New(),
 		Email:    email,
 		PassHash: passHash,
@@ -86,23 +85,23 @@ func (s *Storage) SaveUser(
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == "23505" {
-				return models.User{}, storage.ErrUserAlreadyExists
+				return domain.User{}, domain.ErrUserAlreadyExists
 			}
 		}
 
-		return models.User{}, fmt.Errorf("%s: %w", op, err)
+		return domain.User{}, fmt.Errorf("%s: %w", op, err)
 	}
 
 	return user, nil
 }
 
-func (s *Storage) GetUser(
+func (s *Postgres) GetUser(
 	ctx context.Context,
 	email string,
-) (models.User, error) {
+) (domain.User, error) {
 	const op = "postgres.GetUser"
 
-	var user models.User
+	var user domain.User
 
 	query := `
 		SELECT id, email, pass_hash, is_admin
@@ -119,10 +118,10 @@ func (s *Storage) GetUser(
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.User{}, storage.ErrUserNotFound
+			return domain.User{}, domain.ErrUserNotFound
 		}
 
-		return models.User{}, fmt.Errorf("%s: %w", op, err)
+		return domain.User{}, fmt.Errorf("%s: %w", op, err)
 	}
 	return user, nil
 }

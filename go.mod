@@ -5,6 +5,7 @@ go 1.25.7
 require (
 	github.com/antongolenev23/voltake-protos v1.0.5
 	github.com/brianvoe/gofakeit/v6 v6.28.0
+	github.com/go-chi/chi/v5 v5.3.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0

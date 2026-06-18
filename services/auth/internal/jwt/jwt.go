@@ -6,7 +6,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/antongolenev23/voltake-services/services/auth/internal/config"
-	"github.com/antongolenev23/voltake-services/services/auth/internal/domain/models"
+	"github.com/antongolenev23/voltake-services/services/auth/internal/domain"
 
 	"github.com/google/uuid"
 )
@@ -17,7 +17,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(user models.User, JWTcfg *config.ConfigJWT) (string, error) {
+func GenerateToken(user domain.User, JWTcfg *config.ConfigJWT) (string, error) {
 	claims := Claims{
 		UserID:  user.ID,
 		IsAdmin: user.IsAdmin,
