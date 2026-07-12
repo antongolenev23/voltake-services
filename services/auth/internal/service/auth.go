@@ -1,4 +1,4 @@
-package usecase
+package service
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	"github.com/antongolenev23/voltake-services/services/auth/internal/jwt"
 )
 
-type Storage interface {
+type Repository interface {
 	SaveUser(
 		ctx context.Context,
 		email string,
@@ -23,17 +23,17 @@ type Storage interface {
 }
 
 type Auth struct {
-	jwtCfg  *config.ConfigJWT
-	storage Storage
+	jwtCfg     *config.ConfigJWT
+	repository Repository
 }
 
 func New(
 	jwtCfg *config.ConfigJWT,
-	storage Storage,
+	repository Repository,
 ) *Auth {
 	return &Auth{
-		jwtCfg:  jwtCfg,
-		storage: storage,
+		jwtCfg:     jwtCfg,
+		repository: repository,
 	}
 }
 
@@ -49,7 +49,7 @@ func (a *Auth) Register(
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	user, err := a.storage.SaveUser(ctx, email, passHash)
+	user, err := a.repository.SaveUser(ctx, email, passHash)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserAlreadyExists) {
 			return "", err
@@ -72,7 +72,7 @@ func (a *Auth) Login(
 ) (string, error) {
 	const op = "service.Login"
 
-	user, err := a.storage.GetUser(ctx, email)
+	user, err := a.repository.GetUser(ctx, email)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
 			return "", err

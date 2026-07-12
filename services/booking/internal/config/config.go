@@ -10,20 +10,20 @@ import (
 )
 
 type Config struct {
-	Env        string `yaml:"env" env-required:"true"`
-	Storage    ConfigStorage
-	HTTPServer ConfigHTTPServer `yaml:"http_server"`
+	Env         string `yaml:"env" env-required:"true"`
+	Repository  ConfigRepository
+	HTTPServer  ConfigHTTPServer  `yaml:"http_server"`
 	AuthService ConfigAuthService `yaml:"auth_service"`
-	JWT        ConfigJWT
+	JWT         ConfigJWT
 }
 
-type ConfigStorage struct {
-	Host     string `env:"BOOKING_STORAGE_HOST" env-required:"true"`
-	Port     int    `env:"BOOKING_STORAGE_PORT" env-required:"true"`
-	User     string `env:"BOOKING_STORAGE_USER" env-required:"true"`
-	Password string `env:"BOOKING_STORAGE_PASSWORD" env-required:"true"`
-	Name     string `env:"BOOKING_STORAGE_NAME" env-required:"true"`
-	SSLMode  string `env:"BOOKING_STORAGE_SSLMODE" env-required:"true"`
+type ConfigRepository struct {
+	Host     string `env:"BOOKING_REPOSITORY_HOST" env-required:"true"`
+	Port     int    `env:"BOOKING_REPOSITORY_PORT" env-required:"true"`
+	User     string `env:"BOOKING_REPOSITORY_USER" env-required:"true"`
+	Password string `env:"BOOKING_REPOSITORY_PASSWORD" env-required:"true"`
+	Name     string `env:"BOOKING_REPOSITORY_NAME" env-required:"true"`
+	SSLMode  string `env:"BOOKING_REPOSITORY_SSLMODE" env-required:"true"`
 }
 
 type ConfigHTTPServer struct {

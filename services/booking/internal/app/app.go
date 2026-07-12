@@ -13,8 +13,8 @@ import (
 	"github.com/antongolenev23/voltake-services/services/booking/internal/config"
 	"github.com/antongolenev23/voltake-services/services/booking/internal/http-server/handler"
 	"github.com/antongolenev23/voltake-services/services/booking/internal/http-server/router"
-	"github.com/antongolenev23/voltake-services/services/booking/internal/storage/postgres"
-	"github.com/antongolenev23/voltake-services/services/booking/internal/usecase"
+	"github.com/antongolenev23/voltake-services/services/booking/internal/repository/postgres"
+	"github.com/antongolenev23/voltake-services/services/booking/internal/service"
 )
 
 type App struct {
@@ -31,7 +31,7 @@ func New(cfg *config.Config, log *slog.Logger) *App {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	pgxpool, err := postgres.NewPgxpool(ctx, &cfg.Storage)
+	pgxpool, err := postgres.NewPgxpool(ctx, &cfg.Repository)
 	if err != nil {
 		log.Error("failed to init repo", "error", err)
 		os.Exit(1)
@@ -43,8 +43,8 @@ func New(cfg *config.Config, log *slog.Logger) *App {
 		os.Exit(1)
 	}
 
-	storage := postgres.New(pgxpool)
-	booking := usecase.New(storage)
+	repository := postgres.New(pgxpool)
+	booking := service.New(repository)
 	handlerHTTP := handler.New(booking, authClient, log)
 
 	r := router.New(handlerHTTP)

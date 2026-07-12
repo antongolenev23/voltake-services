@@ -6,6 +6,10 @@ import (
 	"log/slog"
 	"net/http"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	"github.com/antongolenev23/voltake-services/pkg/logger"
 	authclient "github.com/antongolenev23/voltake-services/services/booking/internal/auth-client"
 )
 
@@ -21,8 +25,8 @@ type ClientInterface interface {
 
 type Handler struct {
 	booking Booking
-	client ClientInterface
-	log *slog.Logger
+	client  ClientInterface
+	Log     *slog.Logger
 }
 
 func New(
@@ -32,30 +36,36 @@ func New(
 ) *Handler {
 	return &Handler{
 		booking: booking,
-		client: client,
-		log: log,
+		client:  client,
+		Log:     log,
 	}
 }
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
-	var req authclient.Credentials
+	const op = "handler.Register"
+	log := logger.LoggerWithRequestID(h.Log, r.Context())
+	log = log.With(slog.String("operation", op))
 
+	log.Info("starting register request processing")
+
+	var req authclient.Credentials
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Warn("failed to decode request body", slog.String("error", err.Error()))
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	resp, err := h.client.Register(r.Context(), req)
 	if err != nil {
-		h.log.Error("failed to register", slog.String("error", err.Error()))
-		http.Error(w, "failed to register", http.StatusInternalServerError)
+		sendRegisterErrorResponse(err, log, w)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-
 	w.WriteHeader(http.StatusCreated)
+
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		log.Error("failed to register", slog.String("error", err.Error()))
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -149,4 +159,27 @@ func (h *Handler) GetBooking(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) CancelBooking(w http.ResponseWriter, r *http.Request) {
 	// TODO
+}
+
+func sendRegisterErrorResponse(err error, log *slog.Logger, w http.ResponseWriter) {
+	st, ok := status.FromError(err)
+	if !ok {
+		log.Error("failed to register", slog.String("error", err.Error()))
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	switch st.Code() {
+	case codes.InvalidArgument:
+		log.Info("invalid register request", slog.String("error", st.Message()))
+		http.Error(w, st.Message(), http.StatusBadRequest)
+
+	case codes.AlreadyExists:
+		log.Info("user already exists", slog.String("error", st.Message()))
+		http.Error(w, st.Message(), http.StatusConflict)
+
+	default:
+		log.Error("failed to register", slog.String("error", st.Message()))
+		http.Error(w, "internal error", http.StatusInternalServerError)
+	}
 }

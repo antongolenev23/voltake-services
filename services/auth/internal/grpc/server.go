@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/antongolenev23/voltake-services/pkg/logger"
 	"github.com/antongolenev23/voltake-services/services/auth/internal/domain"
 )
 
@@ -42,20 +43,18 @@ func (s *serverAPI) Register(
 	req *authv1.Credentials,
 ) (*authv1.AuthResponse, error) {
 	const op = "grpc.Register"
-
-	log := s.log.With(
-		slog.String("op", op),
-	)
+	log := logger.LoggerWithRequestID(s.log, ctx)
+	log = log.With(slog.String("operation", op))
 
 	if err := validateCredentials(req); err != nil {
-		log.Info("invalid credentials", slog.String("error", err.Error()))
+		log.Info("invalid register credentials", slog.String("error", err.Error()))
 		return nil, err
 	}
 
 	token, err := s.auth.Register(ctx, req.GetEmail(), req.GetPassword())
 	if err != nil {
 		if errors.Is(err, domain.ErrUserAlreadyExists) {
-			log.Info("can not register", slog.String("error", "user already exists"))
+			log.Info("can not register", slog.String("error", err.Error()))
 			return nil, status.Error(codes.AlreadyExists, "user already exists")
 		}
 		log.Error("can not register", slog.String("error", err.Error()))

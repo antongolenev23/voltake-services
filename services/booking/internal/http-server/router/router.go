@@ -5,13 +5,17 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/antongolenev23/voltake-services/services/booking/internal/http-server/handler"
+	appmiddleware "github.com/antongolenev23/voltake-services/services/booking/internal/http-server/middleware"
 )
 
 func New(h *handler.Handler) *chi.Mux {
 	r := chi.NewRouter()
 
-	r.Use(middleware.RequestID)
-	r.Use(middleware.Recoverer)
+	r.Use(
+		middleware.Recoverer,
+		appmiddleware.RequestID(),
+		appmiddleware.LoggerMiddleware(h.Log),
+	)
 
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", h.Register)

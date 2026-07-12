@@ -9,8 +9,8 @@ import (
 	"github.com/antongolenev23/voltake-services/services/booking/internal/config"
 )
 
-func NewPgxpool(ctx context.Context, cfg *config.ConfigStorage) (*pgxpool.Pool, error) {
-	const op = "storage.NewPostgres"
+func NewPgxpool(ctx context.Context, cfg *config.ConfigRepository) (*pgxpool.Pool, error) {
+	const op = "repository.NewPostgres"
 
 	connStr := fmt.Sprintf(
 		"postgres://%s:%s@%s:%d/%s?sslmode=%s",

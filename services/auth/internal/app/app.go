@@ -12,10 +12,13 @@ import (
 	health "google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
+
 	"github.com/antongolenev23/voltake-services/services/auth/internal/config"
 	grpcapi "github.com/antongolenev23/voltake-services/services/auth/internal/grpc"
-	"github.com/antongolenev23/voltake-services/services/auth/internal/storage/postgres"
-	"github.com/antongolenev23/voltake-services/services/auth/internal/usecase"
+	"github.com/antongolenev23/voltake-services/services/auth/internal/grpc/interceptor"
+	"github.com/antongolenev23/voltake-services/services/auth/internal/repository/postgres"
+	"github.com/antongolenev23/voltake-services/services/auth/internal/service"
 )
 
 type App struct {
@@ -31,16 +34,22 @@ func New(cfg *config.Config, log *slog.Logger) *App {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	pgxpool, err := postgres.NewPgxpool(ctx, &cfg.Storage)
+	pgxpool, err := postgres.NewPgxpool(ctx, &cfg.Repository)
 	if err != nil {
 		log.Error("failed to init repo", "error", err)
 		os.Exit(1)
 	}
 
-	storage := postgres.New(pgxpool)
-	usecaseAuth := usecase.New(&cfg.JWT, storage)
-	gRPCServer := grpc.NewServer()
-	grpcapi.Register(gRPCServer, usecaseAuth, log)
+	repository := postgres.New(pgxpool)
+	serviceAuth := service.New(&cfg.JWT, repository)
+	gRPCServer := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			recovery.UnaryServerInterceptor(),
+			interceptor.RequestID(),
+			interceptor.Logging(log),
+		),
+	)
+	grpcapi.Register(gRPCServer, serviceAuth, log)
 
 	hs := health.NewServer()
 	healthpb.RegisterHealthServer(gRPCServer, hs)

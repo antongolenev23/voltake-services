@@ -6,6 +6,8 @@ import (
 	authv1 "github.com/antongolenev23/voltake-protos/gen/go/auth/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	"github.com/antongolenev23/voltake-services/services/booking/internal/auth-client/interceptor"
 )
 
 type Credentials struct {
@@ -14,7 +16,7 @@ type Credentials struct {
 }
 
 type AuthResponse struct {
-	JWTToken  string `json:"jwtToken"`
+	JWTToken string `json:"jwtToken"`
 }
 
 type Client struct {
@@ -26,6 +28,9 @@ func New(addr string) (*Client, error) {
 	conn, err := grpc.NewClient(
 		addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(
+			interceptor.RequestID(),
+		),
 	)
 	if err != nil {
 		return nil, err
@@ -52,7 +57,7 @@ func (c *Client) Register(
 	}
 
 	return AuthResponse{
-		JWTToken:  resp.GetToken(),
+		JWTToken: resp.GetToken(),
 	}, nil
 }
 
@@ -71,7 +76,7 @@ func (c *Client) Login(
 	}
 
 	return AuthResponse{
-		JWTToken:  resp.GetToken(),
+		JWTToken: resp.GetToken(),
 	}, nil
 }
 
