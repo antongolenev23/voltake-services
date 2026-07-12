@@ -28,7 +28,7 @@ services:
       [
         "-path", "/migrations",
         "-database",
-        "postgres://${AUTH_STORAGE_USER}:${AUTH_STORAGE_PASSWORD}@auth-db:${AUTH_STORAGE_PORT}/${AUTH_STORAGE_NAME}?sslmode=${AUTH_STORAGE_SSLMODE}",
+        "postgres://${AUTH_STORAGE_USER}:${AUTH_STORAGE_PASSWORD}@${AUTH_STORAGE_HOST}:${AUTH_STORAGE_PORT}/${AUTH_STORAGE_NAME}?sslmode=${AUTH_STORAGE_SSLMODE}",
         "up"
       ]
     restart: "no"
@@ -59,8 +59,8 @@ services:
         condition: service_completed_successfully
     environment:
       AUTH_CONFIG_PATH: ${AUTH_CONFIG_PATH}
-      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET}
-      AUTH_JWT_TTL: ${AUTH_JWT_TTL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_TTL: ${JWT_TTL}
       AUTH_STORAGE_USER: ${AUTH_STORAGE_USER}
       AUTH_STORAGE_PASSWORD: ${AUTH_STORAGE_PASSWORD}
       AUTH_STORAGE_PORT: ${AUTH_STORAGE_PORT}
@@ -69,5 +69,73 @@ services:
       AUTH_STORAGE_SSLMODE: ${AUTH_STORAGE_SSLMODE}
     volumes:
       - ../../services/auth/config:/app/config
+
+  # BOOKING
+  booking-db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${BOOKING_STORAGE_USER}
+      POSTGRES_PASSWORD: ${BOOKING_STORAGE_PASSWORD}
+      POSTGRES_DB: ${BOOKING_STORAGE_NAME}
+    ports:
+      - "5433:5432"
+    volumes:
+      - booking_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${BOOKING_STORAGE_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  booking-migrate:
+    image: migrate/migrate
+    depends_on:
+      booking-db:
+        condition: service_healthy
+    volumes:
+      - ../../services/booking/migrations:/migrations
+    command:
+      [
+        "-path", "/migrations",
+        "-database",
+        "postgres://${BOOKING_STORAGE_USER}:${BOOKING_STORAGE_PASSWORD}@${BOOKING_STORAGE_HOST}:${BOOKING_STORAGE_PORT}/${BOOKING_STORAGE_NAME}?sslmode=${BOOKING_STORAGE_SSLMODE}",
+        "up"
+      ]
+    restart: "no"
+    environment:
+      BOOKING_STORAGE_USER: ${BOOKING_STORAGE_USER}
+      BOOKING_STORAGE_PASSWORD: ${BOOKING_STORAGE_PASSWORD}
+      BOOKING_STORAGE_PORT: ${BOOKING_STORAGE_PORT}
+      BOOKING_STORAGE_HOST: ${BOOKING_STORAGE_HOST}
+      BOOKING_STORAGE_NAME: ${BOOKING_STORAGE_NAME}
+      BOOKING_STORAGE_SSLMODE: ${BOOKING_STORAGE_SSLMODE}
+
+  booking-service:
+    build:
+      context: ../../
+      dockerfile: services/booking/Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      booking-db:
+        condition: service_healthy
+      booking-migrate:
+        condition: service_completed_successfully
+      auth-service:
+        condition: service_healthy
+    
+    environment:
+      BOOKING_CONFIG_PATH: ${BOOKING_CONFIG_PATH}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_TTL: ${JWT_TTL}
+      BOOKING_STORAGE_USER: ${BOOKING_STORAGE_USER}
+      BOOKING_STORAGE_PASSWORD: ${BOOKING_STORAGE_PASSWORD}
+      BOOKING_STORAGE_PORT: ${BOOKING_STORAGE_PORT}
+      BOOKING_STORAGE_HOST: ${BOOKING_STORAGE_HOST}
+      BOOKING_STORAGE_NAME: ${BOOKING_STORAGE_NAME}
+      BOOKING_STORAGE_SSLMODE: ${BOOKING_STORAGE_SSLMODE}
+    volumes:
+      - ../../services/booking/config:/app/config
 volumes:
   auth_pgdata:
+  booking_pgdata:

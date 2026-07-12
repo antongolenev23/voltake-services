@@ -4,6 +4,7 @@ type Storage interface{}
 
 type Booking struct {
 	storage Storage
+	
 }
 
 func New(

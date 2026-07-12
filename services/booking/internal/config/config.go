@@ -13,6 +13,7 @@ type Config struct {
 	Env        string `yaml:"env" env-required:"true"`
 	Storage    ConfigStorage
 	HTTPServer ConfigHTTPServer `yaml:"http_server"`
+	AuthService ConfigAuthService `yaml:"auth_service"`
 	JWT        ConfigJWT
 }
 
@@ -30,6 +31,10 @@ type ConfigHTTPServer struct {
 	RequestReadTimeout   time.Duration `yaml:"request_read_timeout" env-required:"true"`
 	ResponseWriteTimeout time.Duration `yaml:"response_write_timeout" env-required:"true"`
 	IdleTimeout          time.Duration `yaml:"idle_timeout" env-required:"true"`
+}
+
+type ConfigAuthService struct {
+	Address string `yaml:"address" env-required:"true"`
 }
 
 type ConfigJWT struct {

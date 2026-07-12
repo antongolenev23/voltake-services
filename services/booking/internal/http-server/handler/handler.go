@@ -1,30 +1,86 @@
 package handler
 
-import "net/http"
+import (
+	"context"
+	"encoding/json"
+	"log/slog"
+	"net/http"
+
+	authclient "github.com/antongolenev23/voltake-services/services/booking/internal/auth-client"
+)
 
 type Booking interface {
 }
 
+type ClientInterface interface {
+	Register(ctx context.Context, credentials authclient.Credentials) (authclient.AuthResponse, error)
+	Login(ctx context.Context, credentials authclient.Credentials) (authclient.AuthResponse, error)
+
+	Close() error
+}
+
 type Handler struct {
 	booking Booking
+	client ClientInterface
+	log *slog.Logger
 }
 
 func New(
 	booking Booking,
+	client ClientInterface,
+	log *slog.Logger,
 ) *Handler {
 	return &Handler{
 		booking: booking,
+		client: client,
+		log: log,
 	}
 }
 
-//  Auth
-
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
-	// TODO
+	var req authclient.Credentials
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	resp, err := h.client.Register(r.Context(), req)
+	if err != nil {
+		h.log.Error("failed to register", slog.String("error", err.Error()))
+		http.Error(w, "failed to register", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	w.WriteHeader(http.StatusCreated)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
-	// TODO
+	var req authclient.Credentials
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	resp, err := h.client.Login(r.Context(), req)
+	if err != nil {
+		http.Error(w, "failed to login", http.StatusUnauthorized)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
 }
 
 //  Users

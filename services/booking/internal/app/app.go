@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	authclient "github.com/antongolenev23/voltake-services/services/booking/internal/auth-client"
 	"github.com/antongolenev23/voltake-services/services/booking/internal/config"
 	"github.com/antongolenev23/voltake-services/services/booking/internal/http-server/handler"
 	"github.com/antongolenev23/voltake-services/services/booking/internal/http-server/router"
@@ -20,7 +21,8 @@ type App struct {
 	cfg *config.Config
 	log *slog.Logger
 
-	HTTPServer *http.Server
+	httpServer *http.Server
+	authClient *authclient.Client
 }
 
 func New(cfg *config.Config, log *slog.Logger) *App {
@@ -35,9 +37,15 @@ func New(cfg *config.Config, log *slog.Logger) *App {
 		os.Exit(1)
 	}
 
+	authClient, err := authclient.New(cfg.AuthService.Address)
+	if err != nil {
+		log.Error("failed to connect auth service", "error", err)
+		os.Exit(1)
+	}
+
 	storage := postgres.New(pgxpool)
 	booking := usecase.New(storage)
-	handlerHTTP := handler.New(booking)
+	handlerHTTP := handler.New(booking, authClient, log)
 
 	r := router.New(handlerHTTP)
 
@@ -52,7 +60,8 @@ func New(cfg *config.Config, log *slog.Logger) *App {
 	return &App{
 		cfg:        cfg,
 		log:        log,
-		HTTPServer: server,
+		httpServer: server,
+		authClient: authClient,
 	}
 
 }
@@ -78,7 +87,7 @@ func (a *App) runServer() {
 			slog.String("address", a.cfg.HTTPServer.Address),
 		)
 
-		if err := a.HTTPServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := a.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			a.log.Error("server stopped", slog.String("error", err.Error()))
 			os.Exit(1)
 		}
@@ -88,15 +97,15 @@ func (a *App) runServer() {
 func (a *App) shutdown(ctx context.Context) {
 	var err error
 
-	if err = a.HTTPServer.Shutdown(ctx); err != nil {
+	if err = a.httpServer.Shutdown(ctx); err != nil {
 		a.log.Error("shutdown error", slog.String("error", err.Error()))
 	} else {
 		a.log.Info("http server stopped")
 	}
 
-	if err != nil {
-		a.log.Warn("uncorrect shutdown")
+	if err := a.authClient.Close(); err != nil {
+		a.log.Error("failed to close auth client", "error", err)
 	} else {
-		a.log.Info("graceful shutdown completed")
+		a.log.Info("auth client connection closed")
 	}
 }

@@ -1,6 +1,7 @@
 package router
 
 import (
+	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 
 	"github.com/antongolenev23/voltake-services/services/booking/internal/http-server/handler"
@@ -9,41 +10,57 @@ import (
 func New(h *handler.Handler) *chi.Mux {
 	r := chi.NewRouter()
 
-	// Auth
-	r.Route("/auth", func(auth chi.Router) {
-		auth.Post("/register", h.Register)
-		auth.Post("/login", h.Login)
+	r.Use(middleware.RequestID)
+	r.Use(middleware.Recoverer)
+
+	r.Route("/auth", func(r chi.Router) {
+		r.Post("/register", h.Register)
+		r.Post("/login", h.Login)
 	})
 
-	// Users
-	r.Route("/users", func(users chi.Router) {
-		users.Get("/me", h.GetMe)
-	})
+	r.Route("/stations", func(r chi.Router) {
+		r.Get("/", h.GetStations)
+		r.Get("/{id}", h.GetStation)
 
-	// Stations
-	r.Route("/stations", func(stations chi.Router) {
-		stations.Get("/", h.GetStations)
-		stations.Post("/", h.CreateStation) // admin
-		stations.Get("/{id}", h.GetStation)
-		stations.Put("/{id}", h.UpdateStation)    // admin
-		stations.Delete("/{id}", h.DeleteStation) // admin
+		r.Route("/{stationId}/ports", func(r chi.Router) {
+			r.Get("/", h.GetPorts)
+			r.Get("/{portId}", h.GetPort)
 
-		stations.Route("/{stationId}/ports", func(ports chi.Router) {
-			ports.Get("/", h.GetPorts)
-			ports.Post("/", h.CreatePort) // admin
-			ports.Get("/{portId}", h.GetPort)
-			ports.Patch("/{portId}", h.UpdatePort)  // admin
-			ports.Delete("/{portId}", h.DeletePort) // admin
+			// r.With(authMW).
+			// 	Post("/{portId}/bookings", h.CreateBooking)
 
-			ports.Post("/{portId}/bookings", h.CreateBooking)
+			r.Group(func(r chi.Router) {
+				// r.Use(authMW)
+				// r.Use(adminMW)
+
+				r.Post("/", h.CreatePort)
+				r.Patch("/{portId}", h.UpdatePort)
+				r.Delete("/{portId}", h.DeletePort)
+			})
+		})
+
+		r.Group(func(r chi.Router) {
+			// r.Use(authMW)
+			// r.Use(adminMW)
+
+			r.Post("/", h.CreateStation)
+			r.Put("/{id}", h.UpdateStation)
+			r.Delete("/{id}", h.DeleteStation)
 		})
 	})
 
-	// Bookings
-	r.Route("/bookings", func(bookings chi.Router) {
-		bookings.Get("/", h.GetBookings)
-		bookings.Get("/{id}", h.GetBooking)
-		bookings.Patch("/{id}/cancel", h.CancelBooking)
+	r.Group(func(r chi.Router) {
+		// r.Use(authMW)
+
+		r.Route("/users", func(r chi.Router) {
+			r.Get("/me", h.GetMe)
+		})
+
+		r.Route("/bookings", func(r chi.Router) {
+			r.Get("/", h.GetBookings)
+			r.Get("/{id}", h.GetBooking)
+			r.Patch("/{id}/cancel", h.CancelBooking)
+		})
 	})
 
 	return r

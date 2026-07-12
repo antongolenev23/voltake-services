@@ -1,0 +1,10 @@
+env: "local"
+
+http_server:
+  address: ":8080"
+  request_read_timeout: "5s"
+  response_write_timeout: "10s"
+  idle_timeout: "60s"
+
+auth_service:
+  address: "auth-service:44044"
