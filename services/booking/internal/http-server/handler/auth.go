@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -26,7 +28,10 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.client.Register(r.Context(), req)
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+
+	resp, err := h.client.Register(ctx, req)
 	if err != nil {
 		handleRegisterError(err, log, w)
 		return
@@ -56,7 +61,10 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.client.Login(r.Context(), req)
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+
+	resp, err := h.client.Login(ctx, req)
 	if err != nil {
 		handleLoginError(err, log, w)
 		return
@@ -90,6 +98,12 @@ func handleRegisterError(err error, log *slog.Logger, w http.ResponseWriter) {
 		log.Info("user already exists", slog.String("error", st.Message()))
 		http.Error(w, "user already exists", http.StatusConflict)
 
+	case codes.DeadlineExceeded:
+		log.Warn("auth service timeout",
+			slog.String("error", st.Message()),
+		)
+		http.Error(w, "service unavailable", http.StatusGatewayTimeout)
+
 	default:
 		log.Error("failed to register", slog.String("error", st.Message()))
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -108,6 +122,12 @@ func handleLoginError(err error, log *slog.Logger, w http.ResponseWriter) {
 	case codes.Unauthenticated:
 		log.Info("invalid credentials", slog.String("error", st.Message()))
 		http.Error(w, "invalid credentials", http.StatusUnauthorized)
+
+	case codes.DeadlineExceeded:
+		log.Warn("auth service timeout",
+			slog.String("error", st.Message()),
+		)
+		http.Error(w, "service unavailable", http.StatusGatewayTimeout)
 
 	default:
 		log.Error("failed to login", slog.String("error", st.Message()))

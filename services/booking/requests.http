@@ -17,3 +17,7 @@ Content-Type: application/json
   "email": "example@mail.ru",
   "password": "34h2hhVFhSHFHbB@Bfus"
 }
+
+### Get charging stations
+GET {{bookingUrl}}/stations
+Content-Type: application/json

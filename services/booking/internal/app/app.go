@@ -47,7 +47,7 @@ func New(cfg *config.Config, log *slog.Logger) *App {
 	booking := service.New(repository)
 	handlerHTTP := handler.New(booking, authClient, log)
 
-	r := router.New(handlerHTTP)
+	r := router.New(handlerHTTP, &cfg.JWT)
 
 	server := &http.Server{
 		Addr:         cfg.HTTPServer.Address,

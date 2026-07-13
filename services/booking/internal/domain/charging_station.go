@@ -1,9 +1,13 @@
 package domain
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type ChargingStation struct {
-	ID        string
+	ID        uuid.UUID
 	Name      string
 	Address   string
 	Latitude  *float64
@@ -11,7 +15,7 @@ type ChargingStation struct {
 	CreatedAt time.Time
 }
 
-func NewChargingStation(id, name, address string) *ChargingStation {
+func NewChargingStation(id uuid.UUID, name, address string) *ChargingStation {
 	return &ChargingStation{
 		ID:        id,
 		Name:      name,

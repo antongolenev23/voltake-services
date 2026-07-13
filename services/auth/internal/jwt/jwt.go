@@ -12,8 +12,8 @@ import (
 )
 
 type Claims struct {
-	UserID  uuid.UUID
-	IsAdmin bool
+	UserID  uuid.UUID `json:"user_id"`
+	IsAdmin bool      `json:"is_admin"`
 	jwt.RegisteredClaims
 }
 

@@ -12,7 +12,8 @@ import (
 
 var ErrRequestBodyTooLarge = errors.New("request body too large")
 
-type Booking interface {
+type Service interface {
+	StationsProvider
 }
 
 type ClientInterface interface {
@@ -23,18 +24,18 @@ type ClientInterface interface {
 }
 
 type Handler struct {
-	booking Booking
+	service Service
 	client  ClientInterface
 	Log     *slog.Logger
 }
 
 func New(
-	booking Booking,
+	service Service,
 	client ClientInterface,
 	log *slog.Logger,
 ) *Handler {
 	return &Handler{
-		booking: booking,
+		service: service,
 		client:  client,
 		Log:     log,
 	}
@@ -43,28 +44,6 @@ func New(
 //  Users
 
 func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
-	// TODO
-}
-
-//  Stations
-
-func (h *Handler) GetStations(w http.ResponseWriter, r *http.Request) {
-	// TODO
-}
-
-func (h *Handler) GetStation(w http.ResponseWriter, r *http.Request) {
-	// TODO
-}
-
-func (h *Handler) CreateStation(w http.ResponseWriter, r *http.Request) {
-	// TODO
-}
-
-func (h *Handler) UpdateStation(w http.ResponseWriter, r *http.Request) {
-	// TODO
-}
-
-func (h *Handler) DeleteStation(w http.ResponseWriter, r *http.Request) {
 	// TODO
 }
 
