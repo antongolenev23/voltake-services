@@ -32,7 +32,7 @@ func LoggerMiddleware(log *slog.Logger) func(next http.Handler) http.Handler {
 				)
 			}()
 
-			next.ServeHTTP(w, r)
+			next.ServeHTTP(ww, r)
 		}
 
 		return http.HandlerFunc(fn)

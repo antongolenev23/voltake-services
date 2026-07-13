@@ -33,10 +33,15 @@ func MustInit(env string) *slog.Logger {
 	return logger
 }
 
-func LoggerWithRequestID(log *slog.Logger, ctx context.Context) *slog.Logger {
+func WithRequestID(log *slog.Logger, ctx context.Context) *slog.Logger {
 	requestID, _ := ctx.Value(types.RequestIDKey).(string)
 
 	return log.With(
 		slog.String("request_id", requestID),
 	)
+}
+
+func WithRequestContext(ctx context.Context, log *slog.Logger, op string) *slog.Logger {
+	return WithRequestID(log, ctx).
+		With(slog.String("operation", op))
 }

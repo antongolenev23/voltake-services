@@ -3,15 +3,14 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
-	"github.com/antongolenev23/voltake-services/pkg/logger"
 	authclient "github.com/antongolenev23/voltake-services/services/booking/internal/auth-client"
 )
+
+var ErrRequestBodyTooLarge = errors.New("request body too large")
 
 type Booking interface {
 }
@@ -38,58 +37,6 @@ func New(
 		booking: booking,
 		client:  client,
 		Log:     log,
-	}
-}
-
-func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
-	const op = "handler.Register"
-	log := logger.LoggerWithRequestID(h.Log, r.Context())
-	log = log.With(slog.String("operation", op))
-
-	log.Info("starting register request processing")
-
-	var req authclient.Credentials
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Warn("failed to decode request body", slog.String("error", err.Error()))
-		http.Error(w, "invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	resp, err := h.client.Register(r.Context(), req)
-	if err != nil {
-		sendRegisterErrorResponse(err, log, w)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Error("failed to register", slog.String("error", err.Error()))
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
-}
-
-func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
-	var req authclient.Credentials
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	resp, err := h.client.Login(r.Context(), req)
-	if err != nil {
-		http.Error(w, "failed to login", http.StatusUnauthorized)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
 	}
 }
 
@@ -161,25 +108,31 @@ func (h *Handler) CancelBooking(w http.ResponseWriter, r *http.Request) {
 	// TODO
 }
 
-func sendRegisterErrorResponse(err error, log *slog.Logger, w http.ResponseWriter) {
-	st, ok := status.FromError(err)
-	if !ok {
-		log.Error("failed to register", slog.String("error", err.Error()))
-		http.Error(w, "internal error", http.StatusInternalServerError)
+func decodeJSONBody(w http.ResponseWriter, r *http.Request, dst any, maxSize int64) error {
+	r.Body = http.MaxBytesReader(w, r.Body, maxSize)
+
+	err := json.NewDecoder(r.Body).Decode(dst)
+	if err != nil {
+		var maxErr *http.MaxBytesError
+		if errors.As(err, &maxErr) {
+			return ErrRequestBodyTooLarge
+		}
+
+		return err
+	}
+
+	return nil
+}
+
+func handleJSONDecodeError(w http.ResponseWriter, log *slog.Logger, err error) {
+	if errors.Is(err, ErrRequestBodyTooLarge) {
+		log.Debug("request body too large")
+		http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
 		return
 	}
 
-	switch st.Code() {
-	case codes.InvalidArgument:
-		log.Info("invalid register request", slog.String("error", st.Message()))
-		http.Error(w, st.Message(), http.StatusBadRequest)
-
-	case codes.AlreadyExists:
-		log.Info("user already exists", slog.String("error", st.Message()))
-		http.Error(w, st.Message(), http.StatusConflict)
-
-	default:
-		log.Error("failed to register", slog.String("error", st.Message()))
-		http.Error(w, "internal error", http.StatusInternalServerError)
-	}
+	log.Debug("failed to decode request body",
+		slog.String("error", err.Error()),
+	)
+	http.Error(w, "invalid request body", http.StatusBadRequest)
 }

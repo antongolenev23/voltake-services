@@ -1,7 +1,16 @@
 @bookingUrl = http://localhost:8080
 
-### Создать бронирование
+### Register
 POST {{bookingUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "example@mail.ru",
+  "password": "34h2hhVFhSHFHbB@Bfus"
+}
+
+### Login
+POST {{bookingUrl}}/auth/login
 Content-Type: application/json
 
 {
