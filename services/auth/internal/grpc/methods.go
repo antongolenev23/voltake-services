@@ -22,10 +22,7 @@ func (s *serverAPI) Register(
 	req *authv1.Credentials,
 ) (*authv1.AuthResponse, error) {
 	const op = "grpc.Register"
-
 	log := logger.WithRequestContext(ctx, s.log, op)
-
-	log.Debug("starting register request processing")
 
 	if err := validateCredentials(req); err != nil {
 		log.Info("invalid register credentials", slog.String("error", err.Error()))
@@ -52,10 +49,7 @@ func (s *serverAPI) Login(
 	req *authv1.Credentials,
 ) (*authv1.AuthResponse, error) {
 	const op = "grpc.Login"
-
 	log := logger.WithRequestContext(ctx, s.log, op)
-
-	log.Debug("starting login request processing")
 
 	token, err := s.auth.Login(ctx, req.GetEmail(), req.GetPassword())
 	if err != nil {

@@ -24,38 +24,36 @@ func New(h *handler.Handler, cfg *config.ConfigJWT) *chi.Mux {
 	})
 
 	r.Route("/stations", func(r chi.Router) {
-		r.Get("/", h.GetStations)
-		r.Get("/{id}", h.GetStation)
-
-		r.Route("/{stationId}/ports", func(r chi.Router) {
+		r.Route("/{stationID}/ports", func(r chi.Router) {
 			r.Get("/", h.GetPorts)
-			r.Get("/{portId}", h.GetPort)
+			r.Get("/{portID}", h.GetPort)
 
-			r.With(appmiddleware.JWT(cfg.Secret)).
-				Post("/{portId}/bookings", h.CreateBooking)
+			r.With(appmiddleware.Auth(cfg.Secret)).
+				Post("/{portID}/bookings", h.CreateBooking)
 
 			r.Group(func(r chi.Router) {
-				r.Use(appmiddleware.JWT(cfg.Secret))
-				// r.Use(adminMW)
+				r.Use(appmiddleware.Auth(cfg.Secret), appmiddleware.IsAdmin)
 
 				r.Post("/", h.CreatePort)
-				r.Patch("/{portId}", h.UpdatePort)
-				r.Delete("/{portId}", h.DeletePort)
+				r.Patch("/{portID}", h.UpdatePort)
+				r.Delete("/{portID}", h.DeletePort)
 			})
 		})
 
+		r.Get("/{stationID}", h.GetStation)
+		r.Get("/", h.GetStations)
+
 		r.Group(func(r chi.Router) {
-			r.Use(appmiddleware.JWT(cfg.Secret))
-			// r.Use(adminMW)
+			r.Use(appmiddleware.Auth(cfg.Secret), appmiddleware.IsAdmin)
 
 			r.Post("/", h.CreateStation)
-			r.Put("/{id}", h.UpdateStation)
-			r.Delete("/{id}", h.DeleteStation)
+			r.Put("/{stationID}", h.UpdateStation)
+			r.Delete("/{stationID}", h.DeleteStation)
 		})
 	})
 
 	r.Group(func(r chi.Router) {
-		r.Use(appmiddleware.JWT(cfg.Secret))
+		r.Use(appmiddleware.Auth(cfg.Secret))
 
 		r.Route("/users", func(r chi.Router) {
 			r.Get("/me", h.GetMe)
@@ -63,8 +61,8 @@ func New(h *handler.Handler, cfg *config.ConfigJWT) *chi.Mux {
 
 		r.Route("/bookings", func(r chi.Router) {
 			r.Get("/", h.GetBookings)
-			r.Get("/{id}", h.GetBooking)
-			r.Patch("/{id}/cancel", h.CancelBooking)
+			r.Get("/{bookingID}", h.GetBooking)
+			r.Patch("/{bookingID}/cancel", h.CancelBooking)
 		})
 	})
 

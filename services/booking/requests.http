@@ -1,4 +1,6 @@
 @bookingUrl = http://localhost:8080
+@authToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiMWFmYjkyNzMtYTYxOS00ZjU3LTk0YjctM2VmYmZhNDhkZmMyIiwiaXNfYWRtaW4iOmZhbHNlLCJleHAiOjE3ODQwNzgzNjksImlhdCI6MTc4NDAzNTE2OX0.zSVY2nd9OKmC-RppRSN_C-oE84SBtLjVqhNGuF1XwtU
+
 
 ### Register
 POST {{bookingUrl}}/auth/register
@@ -8,6 +10,7 @@ Content-Type: application/json
   "email": "example@mail.ru",
   "password": "34h2hhVFhSHFHbB@Bfus"
 }
+
 
 ### Login
 POST {{bookingUrl}}/auth/login
@@ -19,5 +22,29 @@ Content-Type: application/json
 }
 
 ### Get charging stations
-GET {{bookingUrl}}/stations
+
+@offset = 0
+@limit = 20
+
+GET {{bookingUrl}}/stations?offset={{offset}}&limit={{limit}}
 Content-Type: application/json
+
+
+### Get charging station by id
+@id = 6f793b9a-4c93-4b76-99a1-7d197f25c195
+
+GET {{bookingUrl}}/stations/{{id}}
+Content-Type: application/json
+
+### Create charging station
+
+POST {{bookingUrl}}/stations
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Tesla Supercharger Berlin",
+  "address": "Alexanderplatz 1, Berlin",
+  "latitude": 52.5200,
+  "longitude": 13.4050
+}

@@ -20,8 +20,6 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 	log := logger.WithRequestContext(r.Context(), h.Log, op)
 
-	log.Debug("starting register request processing")
-
 	var req authclient.Credentials
 	if err := decodeJSONBody(w, r, &req, maxRequestBodySize); err != nil {
 		handleJSONDecodeError(w, log, err)
@@ -41,7 +39,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Warn("failed to encode register response",
+		log.Error("failed to encode response",
 			slog.String("error", err.Error()),
 		)
 	}
@@ -52,8 +50,6 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	const maxRequestBodySize = 1 * 1024 // 1 KB
 
 	log := logger.WithRequestContext(r.Context(), h.Log, op)
-
-	log.Debug("starting login request processing")
 
 	var req authclient.Credentials
 	if err := decodeJSONBody(w, r, &req, maxRequestBodySize); err != nil {
@@ -73,7 +69,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Warn("failed to encode register response",
+		log.Error("failed to encode response",
 			slog.String("error", err.Error()),
 		)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -99,7 +95,7 @@ func handleRegisterError(err error, log *slog.Logger, w http.ResponseWriter) {
 		http.Error(w, "user already exists", http.StatusConflict)
 
 	case codes.DeadlineExceeded:
-		log.Warn("auth service timeout",
+		log.Error("auth service timeout",
 			slog.String("error", st.Message()),
 		)
 		http.Error(w, "service unavailable", http.StatusGatewayTimeout)
@@ -124,7 +120,7 @@ func handleLoginError(err error, log *slog.Logger, w http.ResponseWriter) {
 		http.Error(w, "invalid credentials", http.StatusUnauthorized)
 
 	case codes.DeadlineExceeded:
-		log.Warn("auth service timeout",
+		log.Error("auth service timeout",
 			slog.String("error", st.Message()),
 		)
 		http.Error(w, "service unavailable", http.StatusGatewayTimeout)

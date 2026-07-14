@@ -7,10 +7,22 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/google/uuid"
+
 	authclient "github.com/antongolenev23/voltake-services/services/booking/internal/auth-client"
+	"github.com/antongolenev23/voltake-services/services/booking/internal/domain"
+	"github.com/antongolenev23/voltake-services/services/booking/internal/http-server/middleware"
 )
 
 var ErrRequestBodyTooLarge = errors.New("request body too large")
+
+type StationsProvider interface {
+	GetStations(ctx context.Context, limit, offset int) ([]*domain.ChargingStation, error)
+	GetStation(ctx context.Context, id uuid.UUID) (*domain.ChargingStation, error)
+	CreateStation(ctx context.Context, station *domain.ChargingStation) (*domain.ChargingStation, error)
+	UpdateStation(ctx context.Context, station *domain.ChargingStation) (*domain.ChargingStation, error)
+	DeleteStation(ctx context.Context, stationID, ownerID uuid.UUID) error
+}
 
 type Service interface {
 	StationsProvider
@@ -105,13 +117,27 @@ func decodeJSONBody(w http.ResponseWriter, r *http.Request, dst any, maxSize int
 
 func handleJSONDecodeError(w http.ResponseWriter, log *slog.Logger, err error) {
 	if errors.Is(err, ErrRequestBodyTooLarge) {
-		log.Debug("request body too large")
+		log.Info("request body too large")
 		http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
 		return
 	}
 
-	log.Debug("failed to decode request body",
+	log.Info("failed to decode request body",
 		slog.String("error", err.Error()),
 	)
 	http.Error(w, "invalid request body", http.StatusBadRequest)
+}
+
+func getUserID(ctx context.Context) (uuid.UUID, error) {
+	userID, ok := ctx.Value(middleware.UserIDKey).(string)
+	if !ok || userID == "" {
+		return uuid.Nil, errors.New("invalid user id")
+	}
+
+	id, err := uuid.Parse(userID)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return id, nil
 }

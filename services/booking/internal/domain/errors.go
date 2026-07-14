@@ -7,4 +7,5 @@ var (
 	ErrBookingAlreadyCancelled = errors.New("booking already cancelled")
 	ErrBookingAlreadyCompleted = errors.New("booking already completed")
 	ErrPortInactive            = errors.New("port is inactive")
+	ErrStationNotFound         = errors.New("station not found")
 )
