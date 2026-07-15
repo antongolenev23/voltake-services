@@ -17,8 +17,8 @@ type StationRequest struct {
 
 func (r *StationRequest) ToCreateDomain(
 	ownerID uuid.UUID,
-) *domain.ChargingStation {
-	return &domain.ChargingStation{
+) domain.ChargingStation {
+	return domain.ChargingStation{
 		OwnerID:   ownerID,
 		Name:      r.Name,
 		Address:   r.Address,
@@ -30,8 +30,8 @@ func (r *StationRequest) ToCreateDomain(
 func (r *StationRequest) ToUpdateDomain(
 	id uuid.UUID,
 	ownerID uuid.UUID,
-) *domain.ChargingStation {
-	return &domain.ChargingStation{
+) domain.ChargingStation {
+	return domain.ChargingStation{
 		ID:        id,
 		OwnerID:   ownerID,
 		Name:      r.Name,
@@ -50,8 +50,8 @@ type StationResponse struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
-func NewStationResponse(station *domain.ChargingStation) *StationResponse {
-	return &StationResponse{
+func NewStationResponse(station domain.ChargingStation) StationResponse {
+	return StationResponse{
 		ID:        station.ID,
 		Name:      station.Name,
 		Address:   station.Address,
@@ -62,10 +62,10 @@ func NewStationResponse(station *domain.ChargingStation) *StationResponse {
 }
 
 func NewStationsResponse(
-	stations []*domain.ChargingStation,
-) []*StationResponse {
+	stations []domain.ChargingStation,
+) []StationResponse {
 
-	responses := make([]*StationResponse, 0, len(stations))
+	responses := make([]StationResponse, 0, len(stations))
 
 	for _, station := range stations {
 		responses = append(

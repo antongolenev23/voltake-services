@@ -64,7 +64,7 @@ func (s *Postgres) SaveUser(
 	query := `
 		INSERT INTO users (id, email, pass_hash, is_admin)
 		VALUES ($1, $2, $3, $4)
-		RETURNING id, email, pass_hash, is_admin
+		RETURNING id, is_admin
 	`
 
 	err := s.db.QueryRow(
@@ -76,8 +76,6 @@ func (s *Postgres) SaveUser(
 		user.IsAdmin,
 	).Scan(
 		&user.ID,
-		&user.Email,
-		&user.PassHash,
 		&user.IsAdmin,
 	)
 
@@ -123,5 +121,78 @@ func (s *Postgres) GetUser(
 
 		return domain.User{}, fmt.Errorf("%s: %w", op, err)
 	}
+	return user, nil
+}
+
+func (s *Postgres) ExistsByEmail(
+	ctx context.Context,
+	email string,
+) (bool, error) {
+	const op = "postgres.ExistsByEmail"
+
+	var exists bool
+
+	query := `
+		SELECT EXISTS(
+			SELECT 1
+			FROM users
+			WHERE email = $1
+		)
+	`
+
+	err := s.db.QueryRow(
+		ctx,
+		query,
+		email,
+	).Scan(&exists)
+
+	if err != nil {
+		return false, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return exists, nil
+}
+
+func (s *Postgres) SaveAdmin(
+	ctx context.Context,
+	email string,
+	passHash []byte,
+) (domain.User, error) {
+	const op = "postgres.SaveAdmin"
+
+	user := domain.User{
+		ID:       uuid.New(),
+		Email:    email,
+		PassHash: passHash,
+		IsAdmin:  true,
+	}
+
+	query := `
+		INSERT INTO users (
+			id,
+			email,
+			pass_hash,
+			is_admin
+		)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, is_admin
+	`
+
+	err := s.db.QueryRow(
+		ctx,
+		query,
+		user.ID,
+		user.Email,
+		user.PassHash,
+		user.IsAdmin,
+	).Scan(
+		&user.ID,
+		&user.IsAdmin,
+	)
+
+	if err != nil {
+		return domain.User{}, fmt.Errorf("%s: %w", op, err)
+	}
+
 	return user, nil
 }

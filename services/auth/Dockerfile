@@ -5,8 +5,12 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
+
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -o auth-service ./services/auth/cmd/auth/main.go
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -o seed-admin ./services/auth/cmd/seed-admin/main.go
 
 
 FROM alpine:latest
@@ -21,5 +25,6 @@ RUN set -eux; \
     ls -la /usr/local/bin/grpc_health_probe
 
 COPY --from=builder /app/auth-service .
+COPY --from=builder /app/seed-admin .
 
 CMD ["./auth-service"]

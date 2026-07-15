@@ -32,10 +32,10 @@ func New(h *handler.Handler, cfg *config.ConfigJWT) *chi.Mux {
 				Post("/{portID}/bookings", h.CreateBooking)
 
 			r.Group(func(r chi.Router) {
-				r.Use(appmiddleware.Auth(cfg.Secret)) // appmiddleware.IsAdmin)
+				r.Use(appmiddleware.Auth(cfg.Secret), appmiddleware.IsAdmin)
 
 				r.Post("/", h.CreatePort)
-				r.Patch("/{portID}", h.UpdatePort)
+				r.Put("/{portID}", h.UpdatePort)
 				r.Delete("/{portID}", h.DeletePort)
 			})
 		})
@@ -44,7 +44,7 @@ func New(h *handler.Handler, cfg *config.ConfigJWT) *chi.Mux {
 		r.Get("/", h.GetStations)
 
 		r.Group(func(r chi.Router) {
-			r.Use(appmiddleware.Auth(cfg.Secret)) // appmiddleware.IsAdmin)
+			r.Use(appmiddleware.Auth(cfg.Secret), appmiddleware.IsAdmin)
 
 			r.Post("/", h.CreateStation)
 			r.Put("/{stationID}", h.UpdateStation)

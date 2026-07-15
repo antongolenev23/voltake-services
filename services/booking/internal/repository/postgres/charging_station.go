@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -15,7 +14,7 @@ import (
 func (p *Postgres) GetStations(
 	ctx context.Context,
 	limit, offset int,
-) ([]*domain.ChargingStation, error) {
+) ([]domain.ChargingStation, error) {
 	const op = "postgres.GetStations"
 
 	const query = `
@@ -38,43 +37,25 @@ func (p *Postgres) GetStations(
 
 	defer rows.Close()
 
-	var stations []*domain.ChargingStation
+	stations := make([]domain.ChargingStation, 0)
 
 	for rows.Next() {
-
-		var (
-			id        uuid.UUID
-			name      string
-			address   string
-			latitude  float64
-			longitude float64
-			createdAt time.Time
-		)
+		var station domain.ChargingStation
 
 		err := rows.Scan(
-			&id,
-			&name,
-			&address,
-			&latitude,
-			&longitude,
-			&createdAt,
+			&station.ID,
+			&station.Name,
+			&station.Address,
+			&station.Latitude,
+			&station.Longitude,
+			&station.CreatedAt,
 		)
 
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", op, err)
 		}
 
-		stations = append(
-			stations,
-			&domain.ChargingStation{
-				ID:        id,
-				Name:      name,
-				Address:   address,
-				Latitude:  latitude,
-				Longitude: longitude,
-				CreatedAt: createdAt,
-			},
-		)
+		stations = append(stations, station)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -87,7 +68,7 @@ func (p *Postgres) GetStations(
 func (p *Postgres) GetStation(
 	ctx context.Context,
 	id uuid.UUID,
-) (*domain.ChargingStation, error) {
+) (domain.ChargingStation, error) {
 	const op = "postgres.GetStation"
 
 	const query = `
@@ -115,19 +96,19 @@ func (p *Postgres) GetStation(
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("%s: %w", op, domain.ErrStationNotFound)
+			return domain.ChargingStation{}, fmt.Errorf("%s: %w", op, domain.ErrStationNotFound)
 		}
 
-		return nil, fmt.Errorf("%s: %w", op, err)
+		return domain.ChargingStation{}, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return &station, nil
+	return station, nil
 }
 
 func (p *Postgres) CreateStation(
 	ctx context.Context,
-	station *domain.ChargingStation,
-) (*domain.ChargingStation, error) {
+	station domain.ChargingStation,
+) (domain.ChargingStation, error) {
 	const op = "postgres.CreateStation"
 
 	const query = `
@@ -149,6 +130,8 @@ func (p *Postgres) CreateStation(
 			created_at
 	`
 
+	var createdStation domain.ChargingStation
+
 	err := p.db.QueryRow(
 		ctx,
 		query,
@@ -158,30 +141,30 @@ func (p *Postgres) CreateStation(
 		station.Latitude,
 		station.Longitude,
 	).Scan(
-		&station.ID,
-		&station.OwnerID,
-		&station.Name,
-		&station.Address,
-		&station.Latitude,
-		&station.Longitude,
-		&station.CreatedAt,
+		&createdStation.ID,
+		&createdStation.OwnerID,
+		&createdStation.Name,
+		&createdStation.Address,
+		&createdStation.Latitude,
+		&createdStation.Longitude,
+		&createdStation.CreatedAt,
 	)
 
 	if err != nil {
-		return nil, fmt.Errorf(
+		return domain.ChargingStation{}, fmt.Errorf(
 			"%s: %w",
 			op,
 			err,
 		)
 	}
 
-	return station, nil
+	return createdStation, nil
 }
 
 func (p *Postgres) UpdateStation(
 	ctx context.Context,
-	station *domain.ChargingStation,
-) (*domain.ChargingStation, error) {
+	station domain.ChargingStation,
+) (domain.ChargingStation, error) {
 	const op = "postgres.UpdateStation"
 
 	const query = `
@@ -203,6 +186,8 @@ func (p *Postgres) UpdateStation(
 			created_at
 	`
 
+	var updatedStation domain.ChargingStation
+
 	err := p.db.QueryRow(
 		ctx,
 		query,
@@ -213,24 +198,28 @@ func (p *Postgres) UpdateStation(
 		station.ID,
 		station.OwnerID,
 	).Scan(
-		&station.ID,
-		&station.OwnerID,
-		&station.Name,
-		&station.Address,
-		&station.Latitude,
-		&station.Longitude,
-		&station.CreatedAt,
+		&updatedStation.ID,
+		&updatedStation.OwnerID,
+		&updatedStation.Name,
+		&updatedStation.Address,
+		&updatedStation.Latitude,
+		&updatedStation.Longitude,
+		&updatedStation.CreatedAt,
 	)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("%s: %w", op, domain.ErrStationNotFound)
+			return domain.ChargingStation{}, fmt.Errorf(
+				"%s: %w",
+				op,
+				domain.ErrStationNotFound,
+			)
 		}
 
-		return nil, fmt.Errorf("%s: %w", op, err)
+		return domain.ChargingStation{}, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return station, nil
+	return updatedStation, nil
 }
 
 func (p *Postgres) DeleteStation(

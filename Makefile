@@ -43,7 +43,7 @@ test-auth:
 
 
 
-# ALL SERVICES CONTROL
+# ALL SERVICES CONTROL LOCAL
 COMPOSE_FILE=deploy/compose/docker-compose.local.yml
 ENV_FILE=.env
 

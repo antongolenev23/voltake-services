@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	authclient "github.com/antongolenev23/voltake-services/services/booking/internal/auth-client"
 	"github.com/antongolenev23/voltake-services/services/booking/internal/config"
 	"github.com/antongolenev23/voltake-services/services/booking/internal/http-server/handler"
@@ -21,6 +23,7 @@ type App struct {
 	cfg *config.Config
 	log *slog.Logger
 
+	db         *pgxpool.Pool
 	httpServer *http.Server
 	authClient *authclient.Client
 }
@@ -60,6 +63,7 @@ func New(cfg *config.Config, log *slog.Logger) *App {
 	return &App{
 		cfg:        cfg,
 		log:        log,
+		db:         pgxpool,
 		httpServer: server,
 		authClient: authClient,
 	}
@@ -69,10 +73,14 @@ func New(cfg *config.Config, log *slog.Logger) *App {
 func (a *App) Run() {
 	a.runServer()
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	ctx, stop := signal.NotifyContext(
+		context.Background(),
+		syscall.SIGINT,
+		syscall.SIGTERM,
+	)
+	defer stop()
 
-	<-stop
+	<-ctx.Done()
 	a.log.Info("shutdown signal received")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -98,14 +106,17 @@ func (a *App) shutdown(ctx context.Context) {
 	var err error
 
 	if err = a.httpServer.Shutdown(ctx); err != nil {
-		a.log.Error("shutdown error", slog.String("error", err.Error()))
+		a.log.Warn("shutdown error", slog.String("error", err.Error()))
 	} else {
-		a.log.Info("http server stopped")
+		a.log.Info("http server stopped gracefully")
 	}
 
 	if err := a.authClient.Close(); err != nil {
-		a.log.Error("failed to close auth client", "error", err)
+		a.log.Warn("failed to close auth client", "error", err)
 	} else {
-		a.log.Info("auth client connection closed")
+		a.log.Info("auth client connection closed gracefully")
 	}
+
+	a.db.Close()
+	a.log.Info("database connection pool closed gracefully")
 }

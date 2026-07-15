@@ -1,17 +1,21 @@
 package domain
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type ChargingPort struct {
-	ID            string
-	StationID     string
+	ID            uuid.UUID
+	StationID     uuid.UUID
 	ConnectorType string
 	PowerKW       int
 	IsActive      bool
 	CreatedAt     time.Time
 }
 
-func NewChargingPort(id, stationID, connectorType string, powerKW int) *ChargingPort {
+func NewChargingPort(id, stationID uuid.UUID, connectorType string, powerKW int) *ChargingPort {
 	return &ChargingPort{
 		ID:            id,
 		StationID:     stationID,

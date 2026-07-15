@@ -53,9 +53,9 @@ func (h *Handler) GetStation(w http.ResponseWriter, r *http.Request) {
 	const op = "handler.GetStation"
 	log := logger.WithRequestContext(r.Context(), h.Log, op)
 
-	stationID := chi.URLParam(r, "stationID")
+	stationIDParam := chi.URLParam(r, "stationID")
 
-	id, err := uuid.Parse(stationID)
+	stationID, err := uuid.Parse(stationIDParam)
 	if err != nil {
 		log.Info("invalid station id", slog.String("error", err.Error()))
 		http.Error(w, "invalid station id", http.StatusBadRequest)
@@ -65,7 +65,7 @@ func (h *Handler) GetStation(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
-	station, err := h.service.GetStation(ctx, id)
+	station, err := h.service.GetStation(ctx, stationID)
 	if err != nil {
 		if errors.Is(err, domain.ErrStationNotFound) {
 			http.Error(w, "station not found", http.StatusNotFound)

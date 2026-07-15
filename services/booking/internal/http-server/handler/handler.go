@@ -17,15 +17,24 @@ import (
 var ErrRequestBodyTooLarge = errors.New("request body too large")
 
 type StationsProvider interface {
-	GetStations(ctx context.Context, limit, offset int) ([]*domain.ChargingStation, error)
-	GetStation(ctx context.Context, id uuid.UUID) (*domain.ChargingStation, error)
-	CreateStation(ctx context.Context, station *domain.ChargingStation) (*domain.ChargingStation, error)
-	UpdateStation(ctx context.Context, station *domain.ChargingStation) (*domain.ChargingStation, error)
+	GetStations(ctx context.Context, limit, offset int) ([]domain.ChargingStation, error)
+	GetStation(ctx context.Context, id uuid.UUID) (domain.ChargingStation, error)
+	CreateStation(ctx context.Context, station domain.ChargingStation) (domain.ChargingStation, error)
+	UpdateStation(ctx context.Context, station domain.ChargingStation) (domain.ChargingStation, error)
 	DeleteStation(ctx context.Context, stationID, ownerID uuid.UUID) error
+}
+
+type PortsProvider interface {
+	GetPorts(ctx context.Context, stationID uuid.UUID) ([]domain.ChargingPort, error)
+	GetPort(ctx context.Context, stationID, portID uuid.UUID) (domain.ChargingPort, error)
+	CreatePort(ctx context.Context, port domain.ChargingPort) (domain.ChargingPort, error)
+	UpdatePort(ctx context.Context, port domain.ChargingPort) (domain.ChargingPort, error)
+	DeletePort(ctx context.Context, stationID, portID uuid.UUID) error
 }
 
 type Service interface {
 	StationsProvider
+	PortsProvider
 }
 
 type ClientInterface interface {
@@ -56,28 +65,6 @@ func New(
 //  Users
 
 func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
-	// TODO
-}
-
-//  Ports
-
-func (h *Handler) GetPorts(w http.ResponseWriter, r *http.Request) {
-	// TODO
-}
-
-func (h *Handler) GetPort(w http.ResponseWriter, r *http.Request) {
-	// TODO
-}
-
-func (h *Handler) CreatePort(w http.ResponseWriter, r *http.Request) {
-	// TODO
-}
-
-func (h *Handler) UpdatePort(w http.ResponseWriter, r *http.Request) {
-	// TODO
-}
-
-func (h *Handler) DeletePort(w http.ResponseWriter, r *http.Request) {
 	// TODO
 }
 

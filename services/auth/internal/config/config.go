@@ -58,3 +58,19 @@ func MustLoad() *Config {
 
 	return cfg
 }
+
+type SeedConfig struct {
+	Repository ConfigRepository
+}
+
+func MustLoadSeed() *SeedConfig {
+	_ = godotenv.Load()
+
+	cfg := new(SeedConfig)
+
+	if err := cleanenv.ReadEnv(cfg); err != nil {
+		log.Fatalf("config read error: %s", err)
+	}
+
+	return cfg
+}

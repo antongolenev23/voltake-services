@@ -12,7 +12,7 @@ import (
 func (s *Service) GetStations(
 	ctx context.Context,
 	limit, offset int,
-) ([]*domain.ChargingStation, error) {
+) ([]domain.ChargingStation, error) {
 	const op = "service.GetStations"
 
 	stations, err := s.repository.GetStations(ctx, limit, offset)
@@ -26,12 +26,12 @@ func (s *Service) GetStations(
 func (s *Service) GetStation(
 	ctx context.Context,
 	id uuid.UUID,
-) (*domain.ChargingStation, error) {
+) (domain.ChargingStation, error) {
 	const op = "service.GetStation"
 
 	station, err := s.repository.GetStation(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
+		return station, fmt.Errorf("%s: %w", op, err)
 	}
 
 	return station, nil
@@ -39,17 +39,20 @@ func (s *Service) GetStation(
 
 func (s *Service) CreateStation(
 	ctx context.Context,
-	station *domain.ChargingStation,
-) (*domain.ChargingStation, error) {
+	station domain.ChargingStation,
+) (domain.ChargingStation, error) {
 	const op = "service.CreateStation"
 
-	if err := station.Validate(); err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
+	var createdStation domain.ChargingStation
+
+	err := station.Validate()
+	if err != nil {
+		return createdStation, fmt.Errorf("%s: %w", op, err)
 	}
 
-	createdStation, err := s.repository.CreateStation(ctx, station)
+	createdStation, err = s.repository.CreateStation(ctx, station)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
+		return createdStation, fmt.Errorf("%s: %w", op, err)
 	}
 
 	return createdStation, nil
@@ -57,18 +60,21 @@ func (s *Service) CreateStation(
 
 func (s *Service) UpdateStation(
 	ctx context.Context,
-	station *domain.ChargingStation,
-) (*domain.ChargingStation, error) {
+	station domain.ChargingStation,
+) (domain.ChargingStation, error) {
 	const op = "service.UpdateStation"
 
-	if err := station.Validate(); err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
+	var updatedStation domain.ChargingStation
+
+	err := station.Validate()
+	if err != nil {
+		return updatedStation, fmt.Errorf("%s: %w", op, err)
 	}
 
-	updatedStation, err := s.repository.UpdateStation(ctx, station)
+	updatedStation, err = s.repository.UpdateStation(ctx, station)
 
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
+		return updatedStation, fmt.Errorf("%s: %w", op, err)
 	}
 
 	return updatedStation, nil

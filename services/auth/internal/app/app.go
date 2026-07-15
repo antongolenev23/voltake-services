@@ -13,6 +13,7 @@ import (
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/antongolenev23/voltake-services/services/auth/internal/config"
 	grpcapi "github.com/antongolenev23/voltake-services/services/auth/internal/grpc"
@@ -25,6 +26,7 @@ type App struct {
 	cfg *config.Config
 	log *slog.Logger
 
+	db         *pgxpool.Pool
 	gRPCServer *grpc.Server
 }
 
@@ -58,6 +60,7 @@ func New(cfg *config.Config, log *slog.Logger) *App {
 	return &App{
 		cfg:        cfg,
 		log:        log,
+		db:         pgxpool,
 		gRPCServer: gRPCServer,
 	}
 }
@@ -93,7 +96,25 @@ func (a *App) run() error {
 func (a *App) Stop() {
 	const op = "app.Stop"
 
-	a.log.With(slog.String("op", op)).Info("stopping gRPC server")
+	a.log.With(slog.String("op", op))
 
-	a.gRPCServer.GracefulStop()
+	a.log.Info("stopping gRPC server")
+
+	done := make(chan struct{})
+
+	go func() {
+		a.gRPCServer.GracefulStop()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		a.log.Info("gRPC server stopped gracefully")
+	case <-time.After(10 * time.Second):
+		a.log.Warn("gRPC graceful shutdown timeout exceeded, forcing stop")
+		a.gRPCServer.Stop()
+	}
+
+	a.db.Close()
+	a.log.Info("database connection pool closed gracefully")
 }

@@ -39,6 +39,31 @@ services:
       AUTH_REPOSITORY_HOST: ${AUTH_REPOSITORY_HOST}
       AUTH_REPOSITORY_NAME: ${AUTH_REPOSITORY_NAME}
       AUTH_REPOSITORY_SSLMODE: ${AUTH_REPOSITORY_SSLMODE}
+    
+  auth-seed-admin:
+    build:
+      context: ../../
+      dockerfile: services/auth/Dockerfile
+
+    command: ["./seed-admin"]
+
+    depends_on:
+      auth-migrate:
+        condition: service_completed_successfully
+    environment:
+      AUTH_CONFIG_PATH: ${AUTH_CONFIG_PATH}
+
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+
+      AUTH_REPOSITORY_USER: ${AUTH_REPOSITORY_USER}
+      AUTH_REPOSITORY_PASSWORD: ${AUTH_REPOSITORY_PASSWORD}
+      AUTH_REPOSITORY_PORT: ${AUTH_REPOSITORY_PORT}
+      AUTH_REPOSITORY_HOST: ${AUTH_REPOSITORY_HOST}
+      AUTH_REPOSITORY_NAME: ${AUTH_REPOSITORY_NAME}
+      AUTH_REPOSITORY_SSLMODE: ${AUTH_REPOSITORY_SSLMODE}
+    volumes:
+    - ../../services/auth/config:/app/config
 
   auth-service:
     build: 
@@ -56,6 +81,8 @@ services:
       auth-db:
         condition: service_healthy
       auth-migrate:
+        condition: service_completed_successfully
+      auth-seed-admin:
         condition: service_completed_successfully
     environment:
       AUTH_CONFIG_PATH: ${AUTH_CONFIG_PATH}

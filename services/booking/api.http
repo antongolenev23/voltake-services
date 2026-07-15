@@ -7,8 +7,8 @@ POST {{bookingUrl}}/auth/register
 Content-Type: application/json
 
 {
-  "email": "example@mail.ru",
-  "password": "34h2hhVFhSHFHbB@Bfus"
+  "email": "{{$dotenv TEST_USER_EMAIL}}",
+  "password": "{{$dotenv TEST_USER_PASSWORD}}"
 }
 
 ### Login
@@ -16,8 +16,17 @@ POST {{bookingUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "example@mail.ru",
-  "password": "34h2hhVFhSHFHbB@Bfus"
+  "email": "{{$dotenv TEST_USER_EMAIL}}",
+  "password": "{{$dotenv TEST_USER_PASSWORD}}"
+}
+
+### Admin Login
+POST {{bookingUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{$dotenv ADMIN_EMAIL}}",
+  "password": "{{$dotenv ADMIN_PASSWORD}}"
 }
 
 
@@ -30,9 +39,9 @@ Content-Type: application/json
 
 
 ### Get charging station by id
-@id = 6f793b9a-4c93-4b76-99a1-7d197f25c195
+@stationID = 8a078fc4-853e-4108-b2a5-4ddd6df55f26
 
-GET {{bookingUrl}}/stations/{{id}}
+GET {{bookingUrl}}/stations/{{stationID}}
 Content-Type: application/json
 
 
@@ -50,7 +59,6 @@ Authorization: Bearer {{authToken}}
 
 
 ### Update charging station
-@stationID = 6f793b9a-4c93-4b76-99a1-7d197f25c195
 
 PUT {{bookingUrl}}/stations/{{stationID}}
 Content-Type: application/json
@@ -67,3 +75,8 @@ Authorization: Bearer {{authToken}}
 ### Delete charging station
 DELETE {{bookingUrl}}/stations/{{stationID}}
 Authorization: Bearer {{authToken}}
+
+
+### Get charging ports by station
+GET {{bookingUrl}}/stations/{{stationID}}/ports
+Content-Type: application/json
