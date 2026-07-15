@@ -1,5 +1,5 @@
-@bookingUrl = http://localhost:8080
-@authToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiMWFmYjkyNzMtYTYxOS00ZjU3LTk0YjctM2VmYmZhNDhkZmMyIiwiaXNfYWRtaW4iOmZhbHNlLCJleHAiOjE3ODQwNzgzNjksImlhdCI6MTc4NDAzNTE2OX0.zSVY2nd9OKmC-RppRSN_C-oE84SBtLjVqhNGuF1XwtU
+@bookingUrl = {{$dotenv BOOKING_URL}}
+@authToken = {{$dotenv JWT_TOKEN}}
 
 
 ### Register
@@ -11,7 +11,6 @@ Content-Type: application/json
   "password": "34h2hhVFhSHFHbB@Bfus"
 }
 
-
 ### Login
 POST {{bookingUrl}}/auth/login
 Content-Type: application/json
@@ -21,8 +20,8 @@ Content-Type: application/json
   "password": "34h2hhVFhSHFHbB@Bfus"
 }
 
-### Get charging stations
 
+### Get charging stations
 @offset = 0
 @limit = 20
 
@@ -36,8 +35,8 @@ Content-Type: application/json
 GET {{bookingUrl}}/stations/{{id}}
 Content-Type: application/json
 
-### Create charging station
 
+### Create charging station
 POST {{bookingUrl}}/stations
 Content-Type: application/json
 Authorization: Bearer {{authToken}}
@@ -48,3 +47,23 @@ Authorization: Bearer {{authToken}}
   "latitude": 52.5200,
   "longitude": 13.4050
 }
+
+
+### Update charging station
+@stationID = 6f793b9a-4c93-4b76-99a1-7d197f25c195
+
+PUT {{bookingUrl}}/stations/{{stationID}}
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Tesla Supercharger Berlin Updated",
+  "address": "Alexanderplatz 5, Berlin",
+  "latitude": 52.5208,
+  "longitude": 13.4095
+}
+
+
+### Delete charging station
+DELETE {{bookingUrl}}/stations/{{stationID}}
+Authorization: Bearer {{authToken}}
