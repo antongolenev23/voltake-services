@@ -18,8 +18,13 @@ fmt-check:
 		echo "All Go files formatted correctly"; \
 	fi
 
+.PHONY: secrets-check
+secrets-check:
+	@echo "Checking for secrets..."
+	@gitleaks protect --source . --no-banner
+
 .PHONY: pre-commit
-pre-commit: fmt-check
+pre-commit: fmt-check secrets-check
 	@echo "Pre-commit checks passed"
 
 

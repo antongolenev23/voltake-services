@@ -24,9 +24,17 @@ type PortsRepository interface {
 	DeletePort(ctx context.Context, stationID uuid.UUID, portID uuid.UUID) error
 }
 
+type BookingRepository interface {
+	CreateBooking(ctx context.Context, booking domain.Booking) (domain.Booking, error)
+	GetBookings(ctx context.Context, userID uuid.UUID, limit, offset int) ([]domain.Booking, error)
+	GetBooking(ctx context.Context, userID, bookingID uuid.UUID) (domain.BookingDetails, error)
+	CancelBooking(ctx context.Context, userID, bookingID uuid.UUID) (domain.Booking, error)
+}
+
 type Repository interface {
 	StationsRepository
 	PortsRepository
+	BookingRepository
 }
 
 type Service struct {

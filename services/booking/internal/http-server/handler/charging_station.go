@@ -41,9 +41,7 @@ func (h *Handler) GetStations(w http.ResponseWriter, r *http.Request) {
 
 	err = json.NewEncoder(w).Encode(resp)
 	if err != nil {
-		log.Error("failed to encode response",
-			slog.String("error", err.Error()),
-		)
+		log.Error("failed to encode response", slog.String("error", err.Error()))
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -126,10 +124,7 @@ func (h *Handler) CreateStation(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Error(
-			"failed to encode response",
-			slog.String("error", err.Error()),
-		)
+		log.Error("failed to encode response", slog.String("error", err.Error()))
 	}
 }
 

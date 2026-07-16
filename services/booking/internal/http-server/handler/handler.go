@@ -32,9 +32,17 @@ type PortsProvider interface {
 	DeletePort(ctx context.Context, stationID, portID uuid.UUID) error
 }
 
+type BookingProvider interface {
+	CreateBooking(ctx context.Context, booking domain.Booking) (domain.Booking, error)
+	GetBookings(ctx context.Context, userID uuid.UUID, limit, offset int) ([]domain.Booking, error)
+	GetBooking(ctx context.Context, userID, bookingID uuid.UUID) (domain.BookingDetails, error)
+	CancelBooking(ctx context.Context, userID, bookingID uuid.UUID) (domain.Booking, error)
+}
+
 type Service interface {
 	StationsProvider
 	PortsProvider
+	BookingProvider
 }
 
 type ClientInterface interface {
@@ -60,30 +68,6 @@ func New(
 		client:  client,
 		Log:     log,
 	}
-}
-
-//  Users
-
-func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
-	// TODO
-}
-
-//  Bookings
-
-func (h *Handler) CreateBooking(w http.ResponseWriter, r *http.Request) {
-	// TODO
-}
-
-func (h *Handler) GetBookings(w http.ResponseWriter, r *http.Request) {
-	// TODO
-}
-
-func (h *Handler) GetBooking(w http.ResponseWriter, r *http.Request) {
-	// TODO
-}
-
-func (h *Handler) CancelBooking(w http.ResponseWriter, r *http.Request) {
-	// TODO
 }
 
 func decodeJSONBody(w http.ResponseWriter, r *http.Request, dst any, maxSize int64) error {
@@ -116,15 +100,10 @@ func handleJSONDecodeError(w http.ResponseWriter, log *slog.Logger, err error) {
 }
 
 func getUserID(ctx context.Context) (uuid.UUID, error) {
-	userID, ok := ctx.Value(middleware.UserIDKey).(string)
-	if !ok || userID == "" {
-		return uuid.Nil, errors.New("invalid user id")
-	}
-
-	id, err := uuid.Parse(userID)
+	claims, err := middleware.GetClaims(ctx)
 	if err != nil {
 		return uuid.Nil, err
 	}
 
-	return id, nil
+	return claims.UserID, nil
 }

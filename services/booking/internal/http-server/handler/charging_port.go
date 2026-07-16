@@ -58,101 +58,49 @@ func (h *Handler) GetPorts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) GetPort(
-	w http.ResponseWriter,
-	r *http.Request,
-) {
+func (h *Handler) GetPort(w http.ResponseWriter, r *http.Request) {
 	const op = "handler.GetPort"
 
-	log := logger.WithRequestContext(
-		r.Context(),
-		h.Log,
-		op,
-	)
+	log := logger.WithRequestContext(r.Context(), h.Log, op)
 
 	stationIDParam := chi.URLParam(r, "stationID")
 	portIDParam := chi.URLParam(r, "portID")
 
 	stationID, err := uuid.Parse(stationIDParam)
 	if err != nil {
-		log.Info(
-			"invalid station id",
-			slog.String("error", err.Error()),
-		)
-
-		http.Error(
-			w,
-			"invalid station id",
-			http.StatusBadRequest,
-		)
-
+		log.Info("invalid station id", slog.String("error", err.Error()))
+		http.Error(w, "invalid station id", http.StatusBadRequest)
 		return
 	}
 
 	portID, err := uuid.Parse(portIDParam)
 	if err != nil {
-		log.Info(
-			"invalid port id",
-			slog.String("error", err.Error()),
-		)
-
-		http.Error(
-			w,
-			"invalid port id",
-			http.StatusBadRequest,
-		)
-
+		log.Info("invalid port id", slog.String("error", err.Error()))
+		http.Error(w, "invalid port id", http.StatusBadRequest)
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(
-		r.Context(),
-		3*time.Second,
-	)
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
-	port, err := h.service.GetPort(
-		ctx,
-		stationID,
-		portID,
-	)
-
+	port, err := h.service.GetPort(ctx, stationID, portID)
 	if err != nil {
 		if errors.Is(err, domain.ErrPortNotFound) {
-			http.Error(
-				w,
-				"port not found",
-				http.StatusNotFound,
-			)
+			http.Error(w, "port not found", http.StatusNotFound)
 			return
 		}
 
-		log.Error(
-			"failed to get port",
-			slog.String("error", err.Error()),
-		)
-
-		http.Error(
-			w,
-			"internal server error",
-			http.StatusInternalServerError,
-		)
-
+		log.Error("failed to get port", slog.String("error", err.Error()))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	resp := dto.NewPortResponse(port)
 
-	w.Header().Set(
-		"Content-Type",
-		"application/json",
-	)
+	w.Header().Set("Content-Type", "application/json")
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Error(
-			"failed to encode response",
-			slog.String("error", err.Error()),
-		)
+		log.Error("failed to encode response", slog.String("error", err.Error()))
 	}
 }
 
@@ -166,17 +114,8 @@ func (h *Handler) CreatePort(w http.ResponseWriter, r *http.Request) {
 
 	stationID, err := uuid.Parse(stationIDParam)
 	if err != nil {
-		log.Info(
-			"invalid station id",
-			slog.String("error", err.Error()),
-		)
-
-		http.Error(
-			w,
-			"invalid station id",
-			http.StatusBadRequest,
-		)
-
+		log.Info("invalid station id", slog.String("error", err.Error()))
+		http.Error(w, "invalid station id", http.StatusBadRequest)
 		return
 	}
 
@@ -189,26 +128,13 @@ func (h *Handler) CreatePort(w http.ResponseWriter, r *http.Request) {
 
 	port := req.ToCreateDomain(stationID)
 
-	ctx, cancel := context.WithTimeout(
-		r.Context(),
-		3*time.Second,
-	)
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
 	createdPort, err := h.service.CreatePort(ctx, port)
-
 	if err != nil {
-		log.Error(
-			"failed to create port",
-			slog.String("error", err.Error()),
-		)
-
-		http.Error(
-			w,
-			"internal server error",
-			http.StatusInternalServerError,
-		)
-
+		log.Error("failed to create port", slog.String("error", err.Error()))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -218,19 +144,13 @@ func (h *Handler) CreatePort(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Error(
-			"failed to encode response",
-			slog.String("error", err.Error()),
-		)
+		log.Error("failed to encode response", slog.String("error", err.Error()))
 	}
 }
 
-func (h *Handler) UpdatePort(
-	w http.ResponseWriter,
-	r *http.Request,
-) {
+func (h *Handler) UpdatePort(w http.ResponseWriter, r *http.Request) {
 	const op = "handler.UpdatePort"
-	const maxRequestBodySize = 1 * 1024
+	const maxRequestBodySize = 1 * 1024 // 1 KB
 
 	log := logger.WithRequestContext(r.Context(), h.Log, op)
 
@@ -239,22 +159,14 @@ func (h *Handler) UpdatePort(
 
 	stationID, err := uuid.Parse(stationIDParam)
 	if err != nil {
-		log.Info(
-			"invalid station id",
-			slog.String("error", err.Error()),
-		)
-
+		log.Info("invalid station id", slog.String("error", err.Error()))
 		http.Error(w, "invalid station id", http.StatusBadRequest)
 		return
 	}
 
 	portID, err := uuid.Parse(portIDParam)
 	if err != nil {
-		log.Info(
-			"invalid port id",
-			slog.String("error", err.Error()),
-		)
-
+		log.Info("invalid port id", slog.String("error", err.Error()))
 		http.Error(w, "invalid port id", http.StatusBadRequest)
 		return
 	}
@@ -266,40 +178,20 @@ func (h *Handler) UpdatePort(
 		return
 	}
 
-	port := req.ToUpdateDomain(
-		stationID,
-		portID,
-	)
+	port := req.ToUpdateDomain(stationID, portID)
 
-	ctx, cancel := context.WithTimeout(
-		r.Context(),
-		3*time.Second,
-	)
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
 	updatedPort, err := h.service.UpdatePort(ctx, port)
-
 	if err != nil {
 		if errors.Is(err, domain.ErrPortNotFound) {
-			http.Error(
-				w,
-				"port not found",
-				http.StatusNotFound,
-			)
+			http.Error(w, "port not found", http.StatusNotFound)
 			return
 		}
 
-		log.Error(
-			"failed to update port",
-			slog.String("error", err.Error()),
-		)
-
-		http.Error(
-			w,
-			"internal server error",
-			http.StatusInternalServerError,
-		)
-
+		log.Error("failed to update port", slog.String("error", err.Error()))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -308,17 +200,11 @@ func (h *Handler) UpdatePort(
 	w.Header().Set("Content-Type", "application/json")
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Error(
-			"failed to encode response",
-			slog.String("error", err.Error()),
-		)
+		log.Error("failed to encode response", slog.String("error", err.Error()))
 	}
 }
 
-func (h *Handler) DeletePort(
-	w http.ResponseWriter,
-	r *http.Request,
-) {
+func (h *Handler) DeletePort(w http.ResponseWriter, r *http.Request) {
 	const op = "handler.DeletePort"
 
 	log := logger.WithRequestContext(r.Context(), h.Log, op)
@@ -328,70 +214,30 @@ func (h *Handler) DeletePort(
 
 	stationID, err := uuid.Parse(stationIDParam)
 	if err != nil {
-		log.Info(
-			"invalid station id",
-			slog.String("error", err.Error()),
-		)
-
-		http.Error(
-			w,
-			"invalid station id",
-			http.StatusBadRequest,
-		)
-
+		log.Info("invalid station id", slog.String("error", err.Error()))
+		http.Error(w, "invalid station id", http.StatusBadRequest)
 		return
 	}
 
 	portID, err := uuid.Parse(portIDParam)
 	if err != nil {
-		log.Info(
-			"invalid port id",
-			slog.String("error", err.Error()),
-		)
-
-		http.Error(
-			w,
-			"invalid port id",
-			http.StatusBadRequest,
-		)
-
+		log.Info("invalid port id", slog.String("error", err.Error()))
+		http.Error(w, "invalid port id", http.StatusBadRequest)
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(
-		r.Context(),
-		3*time.Second,
-	)
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
-	err = h.service.DeletePort(
-		ctx,
-		stationID,
-		portID,
-	)
-
+	err = h.service.DeletePort(ctx, stationID, portID)
 	if err != nil {
 		if errors.Is(err, domain.ErrPortNotFound) {
-			http.Error(
-				w,
-				"port not found",
-				http.StatusNotFound,
-			)
-
+			http.Error(w, "port not found", http.StatusNotFound)
 			return
 		}
 
-		log.Error(
-			"failed to delete port",
-			slog.String("error", err.Error()),
-		)
-
-		http.Error(
-			w,
-			"internal server error",
-			http.StatusInternalServerError,
-		)
-
+		log.Error("failed to delete port", slog.String("error", err.Error()))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 

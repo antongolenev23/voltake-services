@@ -34,10 +34,6 @@ func NewChargingStation(id uuid.UUID, name, address string) *ChargingStation {
 	}
 }
 
-func (s *ChargingStation) Rename(name string) {
-	s.Name = name
-}
-
 func (s *ChargingStation) Validate() error {
 	if s.Name == "" {
 		return ErrStationNameEmpty

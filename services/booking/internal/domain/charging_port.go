@@ -26,14 +26,6 @@ func NewChargingPort(id, stationID uuid.UUID, connectorType string, powerKW int)
 	}
 }
 
-func (p *ChargingPort) Activate() {
-	p.IsActive = true
-}
-
-func (p *ChargingPort) Deactivate() {
-	p.IsActive = false
-}
-
 func (p *ChargingPort) CanAcceptBooking() bool {
 	return p.IsActive
 }

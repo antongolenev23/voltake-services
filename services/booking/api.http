@@ -80,3 +80,77 @@ Authorization: Bearer {{authToken}}
 ### Get charging ports by station
 GET {{bookingUrl}}/stations/{{stationID}}/ports
 Content-Type: application/json
+
+### Get charging port by id
+@portID = 8672dab6-5898-402e-b90c-1e56a5a19c72
+
+GET {{bookingUrl}}/stations/{{stationID}}/ports/{{portID}}
+Content-Type: application/json
+
+
+### Create charging port
+POST {{bookingUrl}}/stations/{{stationID}}/ports
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "connector_type": "CCS2",
+  "power_kw": 150,
+  "is_active": true
+}
+
+
+### Update charging port
+PUT {{bookingUrl}}/stations/{{stationID}}/ports/{{portID}}
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "connector_type": "Type Updated",
+  "power_kw": 22,
+  "is_active": false
+}
+
+
+### Delete charging port
+DELETE {{bookingUrl}}/stations/{{stationID}}/ports/{{portID}}
+Authorization: Bearer {{authToken}}
+
+### Get current user
+GET {{bookingUrl}}/users/me
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+### Create booking
+
+POST {{bookingUrl}}/stations/{{stationID}}/ports/{{portID}}/bookings
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "start_time": "2026-07-20T10:00:00Z",
+  "end_time": "2026-07-20T11:00:00Z"
+}
+
+### Get bookings
+@offset = 0
+@limit = 20
+
+GET {{bookingUrl}}/bookings?offset={{offset}}&limit={{limit}}
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+
+### Get booking by id
+@bookingID = 00000000-0000-0000-0000-000000000000
+
+GET {{bookingUrl}}/bookings/{{bookingID}}
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+
+### Cancel booking
+
+PATCH {{bookingUrl}}/bookings/{{bookingID}}/cancel
+Content-Type: application/json
+Authorization: Bearer {{authToken}}

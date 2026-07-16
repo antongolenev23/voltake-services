@@ -7,16 +7,15 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
+
+	appjwt "github.com/antongolenev23/voltake-services/pkg/jwt"
 )
 
-var ErrUserIDNotFound = errors.New("user id not found")
+var ErrClaimsNotFound = errors.New("claims not found")
 
 type contextKey string
 
-const (
-	UserIDKey  contextKey = "userID"
-	IsAdminKey contextKey = "isAdmin"
-)
+const ClaimsKey contextKey = "claims"
 
 func Auth(secret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -36,10 +35,12 @@ func Auth(secret string) func(http.Handler) http.Handler {
 				return
 			}
 
-			token, err := jwt.Parse(
-				tokenString,
-				func(token *jwt.Token) (any, error) {
+			claims := &appjwt.Claims{}
 
+			token, err := jwt.ParseWithClaims(
+				tokenString,
+				claims,
+				func(token *jwt.Token) (any, error) {
 					if token.Method != jwt.SigningMethodHS256 {
 						return nil, jwt.ErrSignatureInvalid
 					}
@@ -49,38 +50,14 @@ func Auth(secret string) func(http.Handler) http.Handler {
 			)
 
 			if err != nil || !token.Valid {
-				http.Error(w, "invalid token", http.StatusUnauthorized)
-				return
-			}
-
-			claims, ok := token.Claims.(jwt.MapClaims)
-			if !ok {
-				http.Error(w, "invalid claims", http.StatusUnauthorized)
-				return
-			}
-
-			userID, ok := claims["user_id"].(string)
-			if !ok || userID == "" {
-				http.Error(w, "missing user_id", http.StatusUnauthorized)
-				return
-			}
-
-			isAdmin, ok := claims["is_admin"].(bool)
-			if !ok {
-				http.Error(w, "missing is_admin", http.StatusUnauthorized)
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
 			}
 
 			ctx := context.WithValue(
 				r.Context(),
-				UserIDKey,
-				userID,
-			)
-
-			ctx = context.WithValue(
-				ctx,
-				IsAdminKey,
-				isAdmin,
+				ClaimsKey,
+				claims,
 			)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
@@ -88,12 +65,27 @@ func Auth(secret string) func(http.Handler) http.Handler {
 	}
 }
 
+func GetClaims(ctx context.Context) (*appjwt.Claims, error) {
+	claims, ok := ctx.Value(ClaimsKey).(*appjwt.Claims)
+
+	if !ok {
+		return nil, ErrClaimsNotFound
+	}
+
+	return claims, nil
+}
+
 func IsAdmin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		isAdmin, ok := r.Context().Value(IsAdminKey).(bool)
+		claims, err := GetClaims(r.Context())
 
-		if !ok || !isAdmin {
+		if err != nil {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		if !claims.IsAdmin {
 			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}
