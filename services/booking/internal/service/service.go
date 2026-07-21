@@ -20,7 +20,7 @@ type PortsRepository interface {
 	GetPorts(ctx context.Context, stationID uuid.UUID) ([]domain.ChargingPort, error)
 	GetPort(ctx context.Context, stationID uuid.UUID, portID uuid.UUID) (domain.ChargingPort, error)
 	CreatePort(ctx context.Context, port domain.ChargingPort) (domain.ChargingPort, error)
-	UpdatePort(ctx context.Context, port domain.ChargingPort) (domain.ChargingPort, error)
+	SetPortActive(ctx context.Context, stationID uuid.UUID, portID uuid.UUID, isActive bool) (domain.ChargingPort, error)
 	DeletePort(ctx context.Context, stationID uuid.UUID, portID uuid.UUID) error
 }
 

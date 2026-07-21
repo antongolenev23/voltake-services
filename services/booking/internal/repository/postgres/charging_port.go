@@ -194,20 +194,20 @@ func (p *Postgres) CreatePort(
 	return createdPort, nil
 }
 
-func (p *Postgres) UpdatePort(
+func (p *Postgres) SetPortActive(
 	ctx context.Context,
-	port domain.ChargingPort,
+	stationID uuid.UUID,
+	portID uuid.UUID,
+	isActive bool,
 ) (domain.ChargingPort, error) {
-	const op = "postgres.UpdatePort"
+	const op = "postgres.SetPortActive"
 
 	const query = `
 		UPDATE charging_ports
 		SET
-			connector_type = $1,
-			power_kw = $2,
-			is_active = $3
-		WHERE id = $4
-		AND station_id = $5
+			is_active = $1
+		WHERE id = $2
+		AND station_id = $3
 		RETURNING
 			id,
 			station_id,
@@ -217,23 +217,21 @@ func (p *Postgres) UpdatePort(
 			created_at
 	`
 
-	var updatedPort domain.ChargingPort
+	var port domain.ChargingPort
 
 	err := p.db.QueryRow(
 		ctx,
 		query,
-		port.ConnectorType,
-		port.PowerKW,
-		port.IsActive,
-		port.ID,
-		port.StationID,
+		isActive,
+		portID,
+		stationID,
 	).Scan(
-		&updatedPort.ID,
-		&updatedPort.StationID,
-		&updatedPort.ConnectorType,
-		&updatedPort.PowerKW,
-		&updatedPort.IsActive,
-		&updatedPort.CreatedAt,
+		&port.ID,
+		&port.StationID,
+		&port.ConnectorType,
+		&port.PowerKW,
+		&port.IsActive,
+		&port.CreatedAt,
 	)
 
 	if err != nil {
@@ -252,7 +250,7 @@ func (p *Postgres) UpdatePort(
 		)
 	}
 
-	return updatedPort, nil
+	return port, nil
 }
 
 func (p *Postgres) DeletePort(

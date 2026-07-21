@@ -57,23 +57,36 @@ func (s *Service) CreatePort(
 	return createdPort, nil
 }
 
-func (s *Service) UpdatePort(
+func (s *Service) ActivatePort(
 	ctx context.Context,
-	port domain.ChargingPort,
+	stationID uuid.UUID,
+	portID uuid.UUID,
 ) (domain.ChargingPort, error) {
-	const op = "service.UpdatePort"
+	const op = "service.ActivatePort"
 
-	updatedPort, err := s.repository.UpdatePort(ctx, port)
+	port, err := s.repository.SetPortActive(ctx, stationID, portID, true)
 
 	if err != nil {
-		return domain.ChargingPort{}, fmt.Errorf(
-			"%s: %w",
-			op,
-			err,
-		)
+		return domain.ChargingPort{}, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return updatedPort, nil
+	return port, nil
+}
+
+func (s *Service) DeactivatePort(
+	ctx context.Context,
+	stationID uuid.UUID,
+	portID uuid.UUID,
+) (domain.ChargingPort, error) {
+	const op = "service.DeactivatePort"
+
+	port, err := s.repository.SetPortActive(ctx, stationID, portID, false)
+
+	if err != nil {
+		return domain.ChargingPort{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return port, nil
 }
 
 func (s *Service) DeletePort(

@@ -28,7 +28,8 @@ type PortsProvider interface {
 	GetPorts(ctx context.Context, stationID uuid.UUID) ([]domain.ChargingPort, error)
 	GetPort(ctx context.Context, stationID, portID uuid.UUID) (domain.ChargingPort, error)
 	CreatePort(ctx context.Context, port domain.ChargingPort) (domain.ChargingPort, error)
-	UpdatePort(ctx context.Context, port domain.ChargingPort) (domain.ChargingPort, error)
+	ActivatePort(ctx context.Context, stationID uuid.UUID, portID uuid.UUID) (domain.ChargingPort, error)
+	DeactivatePort(ctx context.Context, stationID uuid.UUID, portID uuid.UUID) (domain.ChargingPort, error)
 	DeletePort(ctx context.Context, stationID, portID uuid.UUID) error
 }
 

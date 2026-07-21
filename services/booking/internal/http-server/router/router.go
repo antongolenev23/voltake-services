@@ -35,7 +35,8 @@ func New(h *handler.Handler, cfg *config.ConfigJWT) *chi.Mux {
 				r.Use(appmiddleware.Auth(cfg.Secret), appmiddleware.IsAdmin)
 
 				r.Post("/", h.CreatePort)
-				r.Put("/{portID}", h.UpdatePort)
+				r.Post("/{portID}/activate", h.ActivatePort)
+				r.Post("/{portID}/deactivate", h.DeactivatePort)
 				r.Delete("/{portID}", h.DeletePort)
 			})
 		})

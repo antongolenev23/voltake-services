@@ -13,4 +13,5 @@ var (
 	ErrBookingInPast           = errors.New("booking in past")
 	ErrBookingTooLong          = errors.New("booking too long")
 	ErrBookingNotFound         = errors.New("booking not found")
+	ErrPortUnavailable         = errors.New("port unavailable")
 )

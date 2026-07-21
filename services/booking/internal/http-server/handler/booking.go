@@ -48,16 +48,15 @@ func (h *Handler) CreateBooking(w http.ResponseWriter, r *http.Request) {
 	created, err := h.service.CreateBooking(ctx, booking)
 	if err != nil {
 		switch {
-		case errors.Is(err, domain.ErrBookingConflict):
-			http.Error(w, "booking conflict", http.StatusConflict)
+		case errors.Is(err, domain.ErrBookingConflict), errors.Is(err, domain.ErrPortUnavailable):
+			http.Error(w, err.Error(), http.StatusConflict)
 		case errors.Is(err, domain.ErrPortNotFound):
-			http.Error(w, "port not found", http.StatusNotFound)
-		case errors.Is(err, domain.ErrBookingInPast),
-			errors.Is(err, domain.ErrBookingTooLong):
+			http.Error(w, err.Error(), http.StatusNotFound)
+		case errors.Is(err, domain.ErrBookingInPast), errors.Is(err, domain.ErrBookingTooLong):
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		default:
 			log.Error("failed to create booking", slog.String("error", err.Error()))
-			http.Error(w, "internal server error", http.StatusInternalServerError)
+			http.Error(w, "internal error", http.StatusInternalServerError)
 		}
 		return
 	}

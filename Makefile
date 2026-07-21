@@ -21,7 +21,7 @@ fmt-check:
 .PHONY: secrets-check
 secrets-check:
 	@echo "Checking for secrets..."
-	@gitleaks protect --source . --no-banner
+	@gitleaks protect --staged --source . --no-banner
 
 .PHONY: pre-commit
 pre-commit: fmt-check secrets-check

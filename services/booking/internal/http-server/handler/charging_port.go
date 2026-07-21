@@ -148,10 +148,17 @@ func (h *Handler) CreatePort(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) UpdatePort(w http.ResponseWriter, r *http.Request) {
-	const op = "handler.UpdatePort"
-	const maxRequestBodySize = 1 * 1024 // 1 KB
+func (h *Handler) ActivatePort(w http.ResponseWriter, r *http.Request) {
+	const op = "handler.ActivatePort"
+	h.changePortStatus(w, r, true, op)
+}
 
+func (h *Handler) DeactivatePort(w http.ResponseWriter, r *http.Request) {
+	const op = "handler.DeactivatePort"
+	h.changePortStatus(w, r, false, op)
+}
+
+func (h *Handler) changePortStatus(w http.ResponseWriter, r *http.Request, isActive bool, op string) {
 	log := logger.WithRequestContext(r.Context(), h.Log, op)
 
 	stationIDParam := chi.URLParam(r, "stationID")
@@ -171,31 +178,29 @@ func (h *Handler) UpdatePort(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req dto.PortRequest
-
-	if err := decodeJSONBody(w, r, &req, maxRequestBodySize); err != nil {
-		handleJSONDecodeError(w, log, err)
-		return
-	}
-
-	port := req.ToUpdateDomain(stationID, portID)
-
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
-	updatedPort, err := h.service.UpdatePort(ctx, port)
+	var port domain.ChargingPort
+
+	if isActive {
+		port, err = h.service.ActivatePort(ctx, stationID, portID)
+	} else {
+		port, err = h.service.DeactivatePort(ctx, stationID, portID)
+	}
+
 	if err != nil {
 		if errors.Is(err, domain.ErrPortNotFound) {
 			http.Error(w, "port not found", http.StatusNotFound)
 			return
 		}
 
-		log.Error("failed to update port", slog.String("error", err.Error()))
+		log.Error("failed to change port status", slog.String("error", err.Error()))
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	resp := dto.NewPortResponse(updatedPort)
+	resp := dto.NewPortResponse(port)
 
 	w.Header().Set("Content-Type", "application/json")
 
