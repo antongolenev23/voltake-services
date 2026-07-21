@@ -14,4 +14,7 @@ var (
 	ErrBookingTooLong          = errors.New("booking too long")
 	ErrBookingNotFound         = errors.New("booking not found")
 	ErrPortUnavailable         = errors.New("port unavailable")
+	ErrInvalidBookingPeriod    = errors.New("booking end time must be after start time")
+	ErrBookingTooShort         = errors.New("booking duration is too short")
+	ErrInvalidBookingTime      = errors.New("booking time must be aligned to 30 minutes")
 )

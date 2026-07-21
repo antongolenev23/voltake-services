@@ -17,6 +17,7 @@ import (
 	"github.com/antongolenev23/voltake-services/services/booking/internal/http-server/router"
 	"github.com/antongolenev23/voltake-services/services/booking/internal/repository/postgres"
 	"github.com/antongolenev23/voltake-services/services/booking/internal/service"
+	"github.com/antongolenev23/voltake-services/services/booking/internal/worker"
 )
 
 type App struct {
@@ -26,6 +27,8 @@ type App struct {
 	db         *pgxpool.Pool
 	httpServer *http.Server
 	authClient *authclient.Client
+
+	bookingCompleteWorker *worker.BookingComplete
 }
 
 func New(cfg *config.Config, log *slog.Logger) *App {
@@ -50,6 +53,8 @@ func New(cfg *config.Config, log *slog.Logger) *App {
 	booking := service.New(repository)
 	handlerHTTP := handler.New(booking, authClient, log)
 
+	bookingCompleteWorker := worker.NewBookingWorker(repository)
+
 	r := router.New(handlerHTTP, &cfg.JWT)
 
 	server := &http.Server{
@@ -61,23 +66,27 @@ func New(cfg *config.Config, log *slog.Logger) *App {
 	}
 
 	return &App{
-		cfg:        cfg,
-		log:        log,
-		db:         pgxpool,
-		httpServer: server,
-		authClient: authClient,
+		cfg:                   cfg,
+		log:                   log,
+		db:                    pgxpool,
+		httpServer:            server,
+		authClient:            authClient,
+		bookingCompleteWorker: bookingCompleteWorker,
 	}
 
 }
 
 func (a *App) Run() {
-	a.runServer()
-
 	ctx, stop := signal.NotifyContext(
 		context.Background(),
 		syscall.SIGINT,
 		syscall.SIGTERM,
 	)
+
+	a.runServer()
+
+	a.bookingCompleteWorker.Start(ctx, a.log)
+
 	defer stop()
 
 	<-ctx.Done()

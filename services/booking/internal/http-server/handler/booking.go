@@ -48,12 +48,16 @@ func (h *Handler) CreateBooking(w http.ResponseWriter, r *http.Request) {
 	created, err := h.service.CreateBooking(ctx, booking)
 	if err != nil {
 		switch {
-		case errors.Is(err, domain.ErrBookingConflict), errors.Is(err, domain.ErrPortUnavailable):
+		case errors.Is(err, domain.ErrBookingConflict),
+			errors.Is(err, domain.ErrPortUnavailable):
 			http.Error(w, err.Error(), http.StatusConflict)
+
 		case errors.Is(err, domain.ErrPortNotFound):
 			http.Error(w, err.Error(), http.StatusNotFound)
-		case errors.Is(err, domain.ErrBookingInPast), errors.Is(err, domain.ErrBookingTooLong):
+
+		case isBookingValidationError(err):
 			http.Error(w, err.Error(), http.StatusBadRequest)
+
 		default:
 			log.Error("failed to create booking", slog.String("error", err.Error()))
 			http.Error(w, "internal error", http.StatusInternalServerError)
@@ -195,4 +199,12 @@ func (h *Handler) CancelBooking(
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		log.Error("failed to encode response", slog.String("error", err.Error()))
 	}
+}
+
+func isBookingValidationError(err error) bool {
+	return errors.Is(err, domain.ErrBookingInPast) ||
+		errors.Is(err, domain.ErrBookingTooLong) ||
+		errors.Is(err, domain.ErrBookingTooShort) ||
+		errors.Is(err, domain.ErrInvalidBookingPeriod) ||
+		errors.Is(err, domain.ErrInvalidBookingTime)
 }

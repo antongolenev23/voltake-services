@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -13,12 +12,8 @@ import (
 func (s *Service) CreateBooking(ctx context.Context, booking domain.Booking) (domain.Booking, error) {
 	const op = "service.CreateBooking"
 
-	if booking.StartTime.Before(time.Now()) {
-		return domain.Booking{}, fmt.Errorf("%s: %w", op, domain.ErrBookingInPast)
-	}
-
-	if booking.EndTime.Sub(booking.StartTime) > 12*time.Hour {
-		return domain.Booking{}, fmt.Errorf("%s: %w", op, domain.ErrBookingTooLong)
+	if err := booking.Validate(); err != nil {
+		return domain.Booking{}, fmt.Errorf("%s: %w", op, err)
 	}
 
 	created, err := s.repository.CreateBooking(ctx, booking)
