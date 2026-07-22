@@ -2,19 +2,16 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/antongolenev23/voltake-services/services/booking/internal/config"
 	"github.com/antongolenev23/voltake-services/services/booking/internal/domain"
 )
 
 type StationsRepository interface {
-	GetStations(ctx context.Context, limit, offset int) ([]domain.ChargingStation, error)
-	GetNearbyStations(
-		ctx context.Context,
-		lat, lng, radius float64,
-		limit, offset int,
-	) ([]domain.ChargingStation, error)
+	GetStations(ctx context.Context, filter domain.StationFilter) ([]domain.ChargingStation, error)
 	GetStation(ctx context.Context, id uuid.UUID) (domain.ChargingStationDetails, error)
 	CreateStation(ctx context.Context, station domain.ChargingStation) (domain.ChargingStation, error)
 	UpdateStation(ctx context.Context, station domain.ChargingStation) (domain.ChargingStation, error)
@@ -23,6 +20,7 @@ type StationsRepository interface {
 
 type PortsRepository interface {
 	GetPort(ctx context.Context, stationID uuid.UUID, portID uuid.UUID) (domain.ChargingPort, error)
+	GetBookedIntervals(ctx context.Context, portID uuid.UUID, from time.Time, to time.Time) ([]domain.TimeRange, error)
 	CreatePort(ctx context.Context, port domain.ChargingPort) (domain.ChargingPort, error)
 	SetPortActive(ctx context.Context, stationID uuid.UUID, portID uuid.UUID, isActive bool) (domain.ChargingPort, error)
 	DeletePort(ctx context.Context, stationID uuid.UUID, portID uuid.UUID) error
@@ -43,12 +41,15 @@ type Repository interface {
 
 type Service struct {
 	repository Repository
+	cfg        *config.BookingConfig
 }
 
 func New(
 	repository Repository,
+	cfg *config.BookingConfig,
 ) *Service {
 	return &Service{
 		repository: repository,
+		cfg:        cfg,
 	}
 }

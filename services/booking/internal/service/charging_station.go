@@ -11,26 +11,11 @@ import (
 
 func (s *Service) GetStations(
 	ctx context.Context,
-	limit, offset int,
+	filter domain.StationFilter,
 ) ([]domain.ChargingStation, error) {
 	const op = "service.GetStations"
 
-	stations, err := s.repository.GetStations(ctx, limit, offset)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
-	}
-
-	return stations, nil
-}
-
-func (s *Service) GetNearbyStations(
-	ctx context.Context,
-	lat, lng, radius float64,
-	limit, offset int,
-) ([]domain.ChargingStation, error) {
-	const op = "service.GetNearbyStations"
-
-	stations, err := s.repository.GetNearbyStations(ctx, lat, lng, radius, limit, offset)
+	stations, err := s.repository.GetStations(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}

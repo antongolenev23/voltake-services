@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -13,24 +14,13 @@ import (
 
 func (p *Postgres) GetStations(
 	ctx context.Context,
-	limit, offset int,
+	filter domain.StationFilter,
 ) ([]domain.ChargingStation, error) {
 	const op = "postgres.GetStations"
 
-	const query = `
-		SELECT
-			id,
-			name,
-			address,
-			ST_Y(location::geometry) AS latitude,
-			ST_X(location::geometry) AS longitude,
-			created_at
-		FROM charging_stations
-		ORDER BY created_at DESC
-		LIMIT $1 OFFSET $2
-	`
+	query, args := buildStationsQuery(filter)
 
-	rows, err := p.db.Query(ctx, query, limit, offset)
+	rows, err := p.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -41,82 +31,150 @@ func (p *Postgres) GetStations(
 	for rows.Next() {
 		var station domain.ChargingStation
 
-		if err := rows.Scan(
+		err := rows.Scan(
 			&station.ID,
 			&station.Name,
 			&station.Address,
 			&station.Latitude,
 			&station.Longitude,
 			&station.CreatedAt,
-		); err != nil {
-			return nil, fmt.Errorf("%s: %w", op, err)
+		)
+		if err != nil {
+			return nil, fmt.Errorf("%s: scan: %w", op, err)
 		}
 
 		stations = append(stations, station)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: rows: %w", op, err)
 	}
 
 	return stations, nil
 }
 
-func (p *Postgres) GetNearbyStations(
-	ctx context.Context,
-	lat, lng, radius float64,
-	limit, offset int,
-) ([]domain.ChargingStation, error) {
-	const op = "postgres.GetNearbyStations"
+func buildStationsQuery(
+	filter domain.StationFilter,
+) (string, []any) {
+	var query strings.Builder
 
-	const query = `
-		SELECT
-			id,
-			name,
-			address,
-			ST_Y(location::geometry) AS latitude,
-			ST_X(location::geometry) AS longitude,
-			created_at
-		FROM charging_stations
-		WHERE ST_DWithin(
-			location,
-			ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
-			$3 * 1000
+	args := make([]any, 0)
+	where := make([]string, 0)
+
+	arg := func(value any) string {
+		args = append(args, value)
+		return fmt.Sprintf("$%d", len(args))
+	}
+
+	addPortFilters(&where, arg, filter)
+	addGeoFilter(&where, arg, filter)
+
+	order := "cs.created_at DESC"
+
+	if filter.Geo != nil {
+		order = fmt.Sprintf(`
+			cs.location <-> ST_SetSRID(
+				ST_MakePoint(%s,%s),
+				4326
+			)::geography
+		`,
+			arg(filter.Geo.Lng),
+			arg(filter.Geo.Lat),
 		)
-		ORDER BY location <-> ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
-		LIMIT $4 OFFSET $5
-	`
-
-	rows, err := p.db.Query(ctx, query, lng, lat, radius, limit, offset)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
-	}
-	defer rows.Close()
-
-	stations := make([]domain.ChargingStation, 0)
-
-	for rows.Next() {
-		var station domain.ChargingStation
-
-		if err := rows.Scan(
-			&station.ID,
-			&station.Name,
-			&station.Address,
-			&station.Latitude,
-			&station.Longitude,
-			&station.CreatedAt,
-		); err != nil {
-			return nil, fmt.Errorf("%s: %w", op, err)
-		}
-
-		stations = append(stations, station)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
+	query.WriteString(`
+		SELECT
+			cs.id,
+			cs.name,
+			cs.address,
+			ST_Y(cs.location::geometry),
+			ST_X(cs.location::geometry),
+			cs.created_at
+		FROM charging_stations cs
+	`)
+
+	if len(where) > 0 {
+		query.WriteString("\nWHERE ")
+		query.WriteString(strings.Join(where, " AND "))
 	}
 
-	return stations, nil
+	query.WriteString("\nORDER BY ")
+	query.WriteString(order)
+
+	query.WriteString(fmt.Sprintf(
+		" LIMIT %s OFFSET %s",
+		arg(filter.Limit),
+		arg(filter.Offset),
+	))
+
+	return query.String(), args
+}
+
+func addPortFilters(
+	where *[]string,
+	arg func(any) string,
+	filter domain.StationFilter,
+) {
+	if filter.ConnectorType == nil && filter.MinPowerKW == nil {
+		return
+	}
+
+	conditions := make([]string, 0, 2)
+
+	if filter.ConnectorType != nil {
+		conditions = append(
+			conditions,
+			fmt.Sprintf(
+				"cp.connector_type = %s",
+				arg(*filter.ConnectorType),
+			),
+		)
+	}
+
+	if filter.MinPowerKW != nil {
+		conditions = append(
+			conditions,
+			fmt.Sprintf(
+				"cp.power_kw >= %s",
+				arg(*filter.MinPowerKW),
+			),
+		)
+	}
+
+	*where = append(*where, fmt.Sprintf(`
+		EXISTS (
+			SELECT 1
+			FROM charging_ports cp
+			WHERE cp.station_id = cs.id
+			AND %s
+		)
+	`, strings.Join(conditions, " AND ")))
+}
+
+func addGeoFilter(
+	where *[]string,
+	arg func(any) string,
+	filter domain.StationFilter,
+) {
+	if filter.Geo == nil {
+		return
+	}
+
+	*where = append(*where, fmt.Sprintf(`
+		ST_DWithin(
+			cs.location,
+			ST_SetSRID(
+				ST_MakePoint(%s,%s),
+				4326
+			)::geography,
+			%s * 1000
+		)
+	`,
+		arg(filter.Geo.Lng),
+		arg(filter.Geo.Lat),
+		arg(filter.Geo.Radius),
+	))
 }
 
 func (p *Postgres) GetStation(

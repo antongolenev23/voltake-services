@@ -15,6 +15,7 @@ type Config struct {
 	HTTPServer  ConfigHTTPServer  `yaml:"http_server"`
 	AuthService ConfigAuthService `yaml:"auth_service"`
 	JWT         ConfigJWT
+	Booking     BookingConfig `yaml:"booking"`
 }
 
 type ConfigRepository struct {
@@ -40,6 +41,12 @@ type ConfigAuthService struct {
 type ConfigJWT struct {
 	TTL    time.Duration `env:"JWT_TTL" env-required:"true"`
 	Secret string        `env:"JWT_SECRET" env-required:"true"`
+}
+
+type BookingConfig struct {
+	MinDuration time.Duration `yaml:"min_duration" env-default:"30m"`
+	MaxDuration time.Duration `yaml:"max_duration" env-default:"4h"`
+	Buffer      time.Duration `yaml:"buffer" env-default:"10m"`
 }
 
 func MustLoad() *Config {

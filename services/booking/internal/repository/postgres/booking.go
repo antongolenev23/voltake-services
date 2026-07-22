@@ -12,25 +12,27 @@ import (
 	"github.com/antongolenev23/voltake-services/services/booking/internal/domain"
 )
 
-func (p *Postgres) CreateBooking(ctx context.Context, booking domain.Booking) (domain.Booking, error) {
+func (p *Postgres) CreateBooking(
+	ctx context.Context,
+	booking domain.Booking,
+) (domain.Booking, error) {
 	const op = "postgres.CreateBooking"
 
 	tx, err := p.db.Begin(ctx)
 	if err != nil {
-		return domain.Booking{}, fmt.Errorf("%s: begin tx: %w", op, err)
+		return domain.Booking{}, fmt.Errorf("%s: %w", op, err)
 	}
 	defer tx.Rollback(ctx)
 
-	const lockQuery = `
+	var isActive bool
+
+	err = tx.QueryRow(ctx, `
 		SELECT is_active
 		FROM charging_ports
 		WHERE id = $1
 		FOR UPDATE
-	`
+	`, booking.PortID).Scan(&isActive)
 
-	var isActive bool
-
-	err = tx.QueryRow(ctx, lockQuery, booking.PortID).Scan(&isActive)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.Booking{}, fmt.Errorf("%s: %w", op, domain.ErrPortNotFound)
@@ -43,21 +45,43 @@ func (p *Postgres) CreateBooking(ctx context.Context, booking domain.Booking) (d
 		return domain.Booking{}, fmt.Errorf("%s: %w", op, domain.ErrPortUnavailable)
 	}
 
-	const insertQuery = `
-		INSERT INTO bookings (user_id, port_id, start_time, end_time)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id, user_id, port_id, start_time, end_time, status, created_at, updated_at
-	`
-
 	var result domain.Booking
 
-	err = tx.QueryRow(
-		ctx, insertQuery,
-		booking.UserID, booking.PortID, booking.StartTime, booking.EndTime,
+	err = tx.QueryRow(ctx, `
+		INSERT INTO bookings (
+			user_id,
+			port_id,
+			start_time,
+			end_time,
+			reserved_until
+		)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING
+			id,
+			user_id,
+			port_id,
+			start_time,
+			end_time,
+			reserved_until,
+			status,
+			created_at,
+			updated_at
+	`,
+		booking.UserID,
+		booking.PortID,
+		booking.StartTime,
+		booking.EndTime,
+		booking.ReservedUntil,
 	).Scan(
-		&result.ID, &result.UserID, &result.PortID,
-		&result.StartTime, &result.EndTime, &result.Status,
-		&result.CreatedAt, &result.UpdatedAt,
+		&result.ID,
+		&result.UserID,
+		&result.PortID,
+		&result.StartTime,
+		&result.EndTime,
+		&result.ReservedUntil,
+		&result.Status,
+		&result.CreatedAt,
+		&result.UpdatedAt,
 	)
 
 	if err != nil {
@@ -67,11 +91,11 @@ func (p *Postgres) CreateBooking(ctx context.Context, booking domain.Booking) (d
 			return domain.Booking{}, fmt.Errorf("%s: %w", op, domain.ErrBookingConflict)
 		}
 
-		return domain.Booking{}, fmt.Errorf("%s: insert booking: %w", op, err)
+		return domain.Booking{}, fmt.Errorf("%s: insert: %w", op, err)
 	}
 
-	if err = tx.Commit(ctx); err != nil {
-		return domain.Booking{}, fmt.Errorf("%s: commit tx: %w", op, err)
+	if err := tx.Commit(ctx); err != nil {
+		return domain.Booking{}, fmt.Errorf("%s: commit: %w", op, err)
 	}
 
 	return result, nil

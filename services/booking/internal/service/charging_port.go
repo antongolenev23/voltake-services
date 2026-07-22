@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -27,6 +28,47 @@ func (s *Service) GetPort(
 	}
 
 	return port, nil
+}
+
+func (s *Service) GetPortAvailability(
+	ctx context.Context,
+	portID uuid.UUID,
+	date time.Time,
+) ([]domain.TimeRange, error) {
+	const op = "service.GetPortAvailability"
+
+	loc := time.UTC
+
+	dayStart := time.Date(
+		date.Year(),
+		date.Month(),
+		date.Day(),
+		0, 0, 0, 0,
+		loc,
+	)
+
+	dayEnd := dayStart.Add(24 * time.Hour)
+
+	bookings, err := s.repository.GetBookedIntervals(
+		ctx,
+		portID,
+		dayStart,
+		dayEnd,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	for i := range bookings {
+		bookings[i].Start = bookings[i].Start.Add(-s.cfg.Buffer)
+	}
+
+	return calculateAvailableSlots(
+		dayStart,
+		dayEnd,
+		bookings,
+		s.cfg.MinDuration,
+	), nil
 }
 
 func (s *Service) CreatePort(
@@ -97,4 +139,45 @@ func (s *Service) DeletePort(
 	}
 
 	return nil
+}
+
+func calculateAvailableSlots(
+	start time.Time,
+	end time.Time,
+	busy []domain.TimeRange,
+	minDuration time.Duration,
+) []domain.TimeRange {
+	slots := make([]domain.TimeRange, 0)
+
+	cursor := start
+
+	for _, item := range busy {
+		if cursor.Before(item.Start) {
+			slot := domain.TimeRange{
+				Start: cursor,
+				End:   item.Start,
+			}
+
+			if slot.End.Sub(slot.Start) >= minDuration {
+				slots = append(slots, slot)
+			}
+		}
+
+		if item.End.After(cursor) {
+			cursor = item.End
+		}
+	}
+
+	if cursor.Before(end) {
+		slot := domain.TimeRange{
+			Start: cursor,
+			End:   end,
+		}
+
+		if slot.End.Sub(slot.Start) >= minDuration {
+			slots = append(slots, slot)
+		}
+	}
+
+	return slots
 }

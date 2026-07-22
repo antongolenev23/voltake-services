@@ -62,3 +62,19 @@ func (s *ChargingStation) Validate() error {
 
 	return nil
 }
+
+type StationFilter struct {
+	Geo *GeoFilter
+
+	ConnectorType *string
+	MinPowerKW    *int
+
+	Limit  int
+	Offset int
+}
+
+type GeoFilter struct {
+	Lat    float64
+	Lng    float64
+	Radius float64
+}

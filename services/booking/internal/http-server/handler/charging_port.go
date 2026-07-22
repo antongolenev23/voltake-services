@@ -57,8 +57,52 @@ func (h *Handler) GetPort(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
+	if err = json.NewEncoder(w).Encode(resp); err != nil {
 		log.Error("failed to encode response", slog.String("error", err.Error()))
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *Handler) GetPortAvailability(w http.ResponseWriter, r *http.Request) {
+	const op = "handler.GetPortAvailability"
+
+	log := logger.WithRequestContext(r.Context(), h.Log, op)
+
+	portID, err := uuid.Parse(chi.URLParam(r, "portID"))
+	if err != nil {
+		http.Error(w, "invalid port id", http.StatusBadRequest)
+		return
+	}
+
+	date, err := time.Parse("2006-01-02", r.URL.Query().Get("date"))
+	if err != nil {
+		http.Error(w, "invalid date", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+
+	slots, err := h.service.GetPortAvailability(ctx, portID, date)
+	if err != nil {
+		log.Error(
+			"failed to get port availability",
+			slog.String("error", err.Error()),
+		)
+
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	resp := dto.NewAvailabilityResponse(date, slots)
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if err = json.NewEncoder(w).Encode(resp); err != nil {
+		log.Error("failed to encode response", slog.String("error", err.Error()))
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
 	}
 }
 

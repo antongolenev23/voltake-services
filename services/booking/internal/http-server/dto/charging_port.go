@@ -65,3 +65,32 @@ func (r PortRequest) ToUpdateDomain(
 		IsActive:      r.IsActive,
 	}
 }
+
+type AvailabilityResponse struct {
+	Date  time.Time             `json:"date"`
+	Slots []AvailabilitySlotDTO `json:"slots"`
+}
+
+type AvailabilitySlotDTO struct {
+	Start time.Time `json:"start_time"`
+	End   time.Time `json:"end_time"`
+}
+
+func NewAvailabilityResponse(
+	date time.Time,
+	slots []domain.TimeRange,
+) AvailabilityResponse {
+	resp := AvailabilityResponse{
+		Date:  date,
+		Slots: make([]AvailabilitySlotDTO, 0, len(slots)),
+	}
+
+	for _, slot := range slots {
+		resp.Slots = append(resp.Slots, AvailabilitySlotDTO{
+			Start: slot.Start,
+			End:   slot.End,
+		})
+	}
+
+	return resp
+}

@@ -101,8 +101,7 @@ func (h *Handler) GetBookings(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
-	err = json.NewEncoder(w).Encode(resp)
-	if err != nil {
+	if err = json.NewEncoder(w).Encode(resp); err != nil {
 		log.Error("failed to encode response", slog.String("error", err.Error()))
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return

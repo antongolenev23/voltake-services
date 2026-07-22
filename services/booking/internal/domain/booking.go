@@ -20,8 +20,9 @@ type Booking struct {
 	UserID uuid.UUID
 	PortID uuid.UUID
 
-	StartTime time.Time
-	EndTime   time.Time
+	StartTime     time.Time
+	EndTime       time.Time
+	ReservedUntil time.Time
 
 	Status BookingStatus
 
@@ -29,7 +30,7 @@ type Booking struct {
 	UpdatedAt time.Time
 }
 
-func (b Booking) Validate() error {
+func (b Booking) Validate(minDuration, maxDuration time.Duration) error {
 	if !b.EndTime.After(b.StartTime) {
 		return ErrInvalidBookingPeriod
 	}
@@ -38,19 +39,21 @@ func (b Booking) Validate() error {
 		return ErrBookingInPast
 	}
 
+	if b.StartTime.Second() != 0 ||
+		b.StartTime.Nanosecond() != 0 ||
+		b.EndTime.Second() != 0 ||
+		b.EndTime.Nanosecond() != 0 {
+		return ErrInvalidBookingTime
+	}
+
 	duration := b.EndTime.Sub(b.StartTime)
 
-	if duration < 30*time.Minute {
+	if duration < minDuration {
 		return ErrBookingTooShort
 	}
 
-	if duration > 4*time.Hour {
+	if duration > maxDuration {
 		return ErrBookingTooLong
-	}
-
-	if b.StartTime.Minute()%30 != 0 ||
-		b.EndTime.Minute()%30 != 0 {
-		return ErrInvalidBookingTime
 	}
 
 	return nil

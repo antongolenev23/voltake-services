@@ -21,38 +21,30 @@ import (
 
 func (h *Handler) GetStations(w http.ResponseWriter, r *http.Request) {
 	const op = "handler.GetStations"
+
 	log := logger.WithRequestContext(r.Context(), h.Log, op)
 
-	q := r.URL.Query()
-	limit, offset := parseLimitAndOffset(q)
-
-	geo, err := parseGeoParams(q)
+	filter, err := parseStationFilter(r.URL.Query())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var stations []domain.ChargingStation
-
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
-	if geo == nil {
-		stations, err = h.service.GetStations(ctx, limit, offset)
-	} else {
-		stations, err = h.service.GetNearbyStations(
-			ctx,
-			geo.Lat,
-			geo.Lng,
-			geo.Radius,
-			limit,
-			offset,
-		)
-	}
-
+	stations, err := h.service.GetStations(ctx, filter)
 	if err != nil {
-		log.Error("failed to get charging stations", slog.String("error", err.Error()))
-		http.Error(w, "failed to get charging stations", http.StatusInternalServerError)
+		log.Error(
+			"failed to get charging stations",
+			slog.String("error", err.Error()),
+		)
+
+		http.Error(
+			w,
+			"failed to get charging stations",
+			http.StatusInternalServerError,
+		)
 		return
 	}
 
@@ -61,8 +53,10 @@ func (h *Handler) GetStations(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Error("failed to encode response", slog.String("error", err.Error()))
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		log.Error(
+			"failed to encode response",
+			slog.String("error", err.Error()),
+		)
 	}
 }
 
@@ -310,4 +304,43 @@ func parseGeoParams(q url.Values) (*geoParams, error) {
 		Lng:    lng,
 		Radius: radius,
 	}, nil
+}
+
+func parseStationFilter(q url.Values) (domain.StationFilter, error) {
+	limit, offset := parseLimitAndOffset(q)
+
+	geo, err := parseGeoParams(q)
+	if err != nil {
+		return domain.StationFilter{}, err
+	}
+
+	filter := domain.StationFilter{
+		Limit:  limit,
+		Offset: offset,
+	}
+
+	if geo != nil {
+		filter.Geo = &domain.GeoFilter{
+			Lat:    geo.Lat,
+			Lng:    geo.Lng,
+			Radius: geo.Radius,
+		}
+	}
+
+	if connector := q.Get("connector_type"); connector != "" {
+		filter.ConnectorType = &connector
+	}
+
+	if powerStr := q.Get("min_power_kw"); powerStr != "" {
+		power, err := strconv.Atoi(powerStr)
+		if err != nil || power <= 0 {
+			return domain.StationFilter{}, errors.New(
+				"invalid min_power_kw",
+			)
+		}
+
+		filter.MinPowerKW = &power
+	}
+
+	return filter, nil
 }

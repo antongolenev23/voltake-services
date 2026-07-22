@@ -50,8 +50,8 @@ func New(cfg *config.Config, log *slog.Logger) *App {
 	}
 
 	repository := postgres.New(pgxpool)
-	booking := service.New(repository)
-	handlerHTTP := handler.New(booking, authClient, log)
+	service := service.New(repository, &cfg.Booking)
+	handlerHTTP := handler.New(service, authClient, log)
 
 	bookingCompleteWorker := worker.NewBookingWorker(repository)
 

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -17,12 +18,7 @@ import (
 var ErrRequestBodyTooLarge = errors.New("request body too large")
 
 type StationsProvider interface {
-	GetStations(ctx context.Context, limit, offset int) ([]domain.ChargingStation, error)
-	GetNearbyStations(
-		ctx context.Context,
-		lat, lng, radius float64,
-		limit, offset int,
-	) ([]domain.ChargingStation, error)
+	GetStations(ctx context.Context, filter domain.StationFilter) ([]domain.ChargingStation, error)
 	GetStation(ctx context.Context, id uuid.UUID) (domain.ChargingStationDetails, error)
 	CreateStation(ctx context.Context, station domain.ChargingStation) (domain.ChargingStation, error)
 	UpdateStation(ctx context.Context, station domain.ChargingStation) (domain.ChargingStation, error)
@@ -31,6 +27,7 @@ type StationsProvider interface {
 
 type PortsProvider interface {
 	GetPort(ctx context.Context, stationID, portID uuid.UUID) (domain.ChargingPort, error)
+	GetPortAvailability(ctx context.Context, portID uuid.UUID, date time.Time) ([]domain.TimeRange, error)
 	CreatePort(ctx context.Context, port domain.ChargingPort) (domain.ChargingPort, error)
 	ActivatePort(ctx context.Context, stationID uuid.UUID, portID uuid.UUID) (domain.ChargingPort, error)
 	DeactivatePort(ctx context.Context, stationID uuid.UUID, portID uuid.UUID) (domain.ChargingPort, error)

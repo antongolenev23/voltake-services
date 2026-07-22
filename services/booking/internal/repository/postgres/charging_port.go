@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -60,6 +61,54 @@ func (p *Postgres) GetPort(
 	}
 
 	return port, nil
+}
+
+func (p *Postgres) GetBookedIntervals(
+	ctx context.Context,
+	portID uuid.UUID,
+	from time.Time,
+	to time.Time,
+) ([]domain.TimeRange, error) {
+	const op = "postgres.GetBookedIntervals"
+
+	const query = `
+		SELECT
+			start_time,
+			reserved_until
+		FROM bookings
+		WHERE port_id = $1
+		AND status = 'booked'
+		AND start_time < $3
+		AND reserved_until > $2
+		ORDER BY start_time
+	`
+
+	rows, err := p.db.Query(ctx, query, portID, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+	defer rows.Close()
+
+	result := make([]domain.TimeRange, 0)
+
+	for rows.Next() {
+		var slot domain.TimeRange
+
+		if err := rows.Scan(
+			&slot.Start,
+			&slot.End,
+		); err != nil {
+			return nil, fmt.Errorf("%s: %w", op, err)
+		}
+
+		result = append(result, slot)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return result, nil
 }
 
 func (p *Postgres) CreatePort(

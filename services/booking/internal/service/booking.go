@@ -9,12 +9,19 @@ import (
 	"github.com/antongolenev23/voltake-services/services/booking/internal/domain"
 )
 
-func (s *Service) CreateBooking(ctx context.Context, booking domain.Booking) (domain.Booking, error) {
+func (s *Service) CreateBooking(
+	ctx context.Context,
+	booking domain.Booking,
+) (domain.Booking, error) {
 	const op = "service.CreateBooking"
 
-	if err := booking.Validate(); err != nil {
+	if err := booking.Validate(s.cfg.MinDuration, s.cfg.MaxDuration); err != nil {
 		return domain.Booking{}, fmt.Errorf("%s: %w", op, err)
 	}
+
+	booking.ReservedUntil = booking.EndTime.Add(
+		s.cfg.Buffer,
+	)
 
 	created, err := s.repository.CreateBooking(ctx, booking)
 	if err != nil {

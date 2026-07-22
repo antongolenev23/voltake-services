@@ -26,6 +26,7 @@ func New(h *handler.Handler, cfg *config.ConfigJWT) *chi.Mux {
 	r.Route("/stations", func(r chi.Router) {
 		r.Route("/{stationID}/ports", func(r chi.Router) {
 			r.Get("/{portID}", h.GetPort)
+			r.Get("/{portID}/availability", h.GetPortAvailability)
 
 			r.With(appmiddleware.Auth(cfg.Secret)).
 				Post("/{portID}/bookings", h.CreateBooking)
