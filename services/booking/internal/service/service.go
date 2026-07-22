@@ -15,14 +15,13 @@ type StationsRepository interface {
 		lat, lng, radius float64,
 		limit, offset int,
 	) ([]domain.ChargingStation, error)
-	GetStation(ctx context.Context, id uuid.UUID) (domain.ChargingStation, error)
+	GetStation(ctx context.Context, id uuid.UUID) (domain.ChargingStationDetails, error)
 	CreateStation(ctx context.Context, station domain.ChargingStation) (domain.ChargingStation, error)
 	UpdateStation(ctx context.Context, station domain.ChargingStation) (domain.ChargingStation, error)
 	DeleteStation(ctx context.Context, stationID, ownerID uuid.UUID) error
 }
 
 type PortsRepository interface {
-	GetPorts(ctx context.Context, stationID uuid.UUID) ([]domain.ChargingPort, error)
 	GetPort(ctx context.Context, stationID uuid.UUID, portID uuid.UUID) (domain.ChargingPort, error)
 	CreatePort(ctx context.Context, port domain.ChargingPort) (domain.ChargingPort, error)
 	SetPortActive(ctx context.Context, stationID uuid.UUID, portID uuid.UUID, isActive bool) (domain.ChargingPort, error)

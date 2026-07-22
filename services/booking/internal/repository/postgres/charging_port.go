@@ -4,96 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/antongolenev23/voltake-services/services/booking/internal/domain"
 )
-
-func (p *Postgres) GetPorts(
-	ctx context.Context,
-	stationID uuid.UUID,
-) ([]domain.ChargingPort, error) {
-	const op = "postgres.GetPorts"
-
-	const query = `
-		SELECT
-			cp.id,
-			cp.station_id,
-			cp.connector_type,
-			cp.power_kw,
-			cp.is_active,
-			cp.created_at
-		FROM charging_stations cs
-		LEFT JOIN charging_ports cp
-			ON cp.station_id = cs.id
-		WHERE cs.id = $1
-		ORDER BY cp.created_at;
-	`
-
-	rows, err := p.db.Query(ctx, query, stationID)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
-	}
-
-	defer rows.Close()
-
-	ports := make([]domain.ChargingPort, 0)
-
-	foundStation := false
-
-	for rows.Next() {
-		foundStation = true
-
-		var (
-			portID        *uuid.UUID
-			portStationID *uuid.UUID
-			connectorType *string
-			powerKW       *int
-			isActive      *bool
-			createdAt     *time.Time
-		)
-
-		err := rows.Scan(
-			&portID,
-			&portStationID,
-			&connectorType,
-			&powerKW,
-			&isActive,
-			&createdAt,
-		)
-
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", op, err)
-		}
-
-		// станция есть, но портов нет
-		if portID == nil {
-			continue
-		}
-
-		ports = append(ports, domain.ChargingPort{
-			ID:            *portID,
-			StationID:     *portStationID,
-			ConnectorType: *connectorType,
-			PowerKW:       *powerKW,
-			IsActive:      *isActive,
-			CreatedAt:     *createdAt,
-		})
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
-	}
-
-	if !foundStation {
-		return nil, fmt.Errorf("%s: %w", op, domain.ErrStationNotFound)
-	}
-
-	return ports, nil
-}
 
 func (p *Postgres) GetPort(
 	ctx context.Context,

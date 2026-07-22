@@ -76,3 +76,33 @@ func NewStationsResponse(
 
 	return responses
 }
+
+type StationWithDetailsResponse struct {
+	ID        uuid.UUID      `json:"id"`
+	Name      string         `json:"name"`
+	Address   string         `json:"address"`
+	Latitude  float64        `json:"latitude"`
+	Longitude float64        `json:"longitude"`
+	Ports     []PortResponse `json:"ports"`
+	CreatedAt time.Time      `json:"created_at"`
+}
+
+func NewStationWithDetailsResponse(
+	station domain.ChargingStationDetails,
+) StationWithDetailsResponse {
+	ports := make([]PortResponse, 0, len(station.Ports))
+
+	for _, port := range station.Ports {
+		ports = append(ports, NewPortResponse(port))
+	}
+
+	return StationWithDetailsResponse{
+		ID:        station.ID,
+		Name:      station.Name,
+		Address:   station.Address,
+		Latitude:  station.Latitude,
+		Longitude: station.Longitude,
+		Ports:     ports,
+		CreatedAt: station.CreatedAt,
+	}
+}

@@ -25,7 +25,6 @@ func New(h *handler.Handler, cfg *config.ConfigJWT) *chi.Mux {
 
 	r.Route("/stations", func(r chi.Router) {
 		r.Route("/{stationID}/ports", func(r chi.Router) {
-			r.Get("/", h.GetPorts)
 			r.Get("/{portID}", h.GetPort)
 
 			r.With(appmiddleware.Auth(cfg.Secret)).

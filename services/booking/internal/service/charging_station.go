@@ -41,12 +41,12 @@ func (s *Service) GetNearbyStations(
 func (s *Service) GetStation(
 	ctx context.Context,
 	id uuid.UUID,
-) (domain.ChargingStation, error) {
+) (domain.ChargingStationDetails, error) {
 	const op = "service.GetStation"
 
 	station, err := s.repository.GetStation(ctx, id)
 	if err != nil {
-		return station, fmt.Errorf("%s: %w", op, err)
+		return domain.ChargingStationDetails{}, fmt.Errorf("%s: %w", op, err)
 	}
 
 	return station, nil

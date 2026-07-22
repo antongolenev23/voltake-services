@@ -122,16 +122,16 @@ func (p *Postgres) GetNearbyStations(
 func (p *Postgres) GetStation(
 	ctx context.Context,
 	id uuid.UUID,
-) (domain.ChargingStation, error) {
+) (domain.ChargingStationDetails, error) {
 	const op = "postgres.GetStation"
 
-	const query = `
+	const stationQuery = `
 		SELECT
 			id,
 			name,
 			address,
-			latitude,
-			longitude,
+			ST_Y(location::geometry),
+			ST_X(location::geometry),
 			created_at
 		FROM charging_stations
 		WHERE id = $1
@@ -139,7 +139,7 @@ func (p *Postgres) GetStation(
 
 	var station domain.ChargingStation
 
-	err := p.db.QueryRow(ctx, query, id).Scan(
+	err := p.db.QueryRow(ctx, stationQuery, id).Scan(
 		&station.ID,
 		&station.Name,
 		&station.Address,
@@ -150,13 +150,65 @@ func (p *Postgres) GetStation(
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return domain.ChargingStation{}, fmt.Errorf("%s: %w", op, domain.ErrStationNotFound)
+			return domain.ChargingStationDetails{}, fmt.Errorf(
+				"%s: %w",
+				op,
+				domain.ErrStationNotFound,
+			)
 		}
 
-		return domain.ChargingStation{}, fmt.Errorf("%s: %w", op, err)
+		return domain.ChargingStationDetails{}, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return station, nil
+	const portsQuery = `
+		SELECT
+			id,
+			station_id,
+			connector_type,
+			power_kw,
+			is_active,
+			created_at
+		FROM charging_ports
+		WHERE station_id = $1
+		ORDER BY created_at
+	`
+
+	rows, err := p.db.Query(ctx, portsQuery, id)
+	if err != nil {
+		return domain.ChargingStationDetails{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	defer rows.Close()
+
+	ports := make([]domain.ChargingPort, 0)
+
+	for rows.Next() {
+		var port domain.ChargingPort
+
+		err := rows.Scan(
+			&port.ID,
+			&port.StationID,
+			&port.ConnectorType,
+			&port.PowerKW,
+			&port.IsActive,
+			&port.CreatedAt,
+		)
+
+		if err != nil {
+			return domain.ChargingStationDetails{}, fmt.Errorf("%s: %w", op, err)
+		}
+
+		ports = append(ports, port)
+	}
+
+	if err := rows.Err(); err != nil {
+		return domain.ChargingStationDetails{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return domain.ChargingStationDetails{
+		ChargingStation: station,
+		Ports:           ports,
+	}, nil
 }
 
 func (p *Postgres) CreateStation(

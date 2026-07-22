@@ -16,48 +16,6 @@ import (
 	"github.com/antongolenev23/voltake-services/services/booking/internal/http-server/dto"
 )
 
-func (h *Handler) GetPorts(w http.ResponseWriter, r *http.Request) {
-	const op = "handler.GetPorts"
-
-	log := logger.WithRequestContext(r.Context(), h.Log, op)
-
-	stationIDParam := chi.URLParam(r, "stationID")
-
-	stationID, err := uuid.Parse(stationIDParam)
-	if err != nil {
-		log.Info("invalid station id", slog.String("error", err.Error()))
-		http.Error(w, "invalid path", http.StatusBadRequest)
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
-	defer cancel()
-
-	ports, err := h.service.GetPorts(ctx, stationID)
-	if err != nil {
-		if errors.Is(err, domain.ErrStationNotFound) {
-			http.Error(w, "station not found", http.StatusNotFound)
-			return
-		}
-
-		log.Error("failed to get ports", slog.String("error", err.Error()))
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	resp := dto.NewPortsResponse(ports)
-
-	w.Header().Set("Content-Type", "application/json")
-
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Error("failed to encode response",
-			slog.String("error", err.Error()),
-		)
-
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-	}
-}
-
 func (h *Handler) GetPort(w http.ResponseWriter, r *http.Request) {
 	const op = "handler.GetPort"
 

@@ -9,20 +9,6 @@ import (
 	"github.com/antongolenev23/voltake-services/services/booking/internal/domain"
 )
 
-func (s *Service) GetPorts(
-	ctx context.Context,
-	stationID uuid.UUID,
-) ([]domain.ChargingPort, error) {
-	const op = "service.GetPorts"
-
-	ports, err := s.repository.GetPorts(ctx, stationID)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
-	}
-
-	return ports, nil
-}
-
 func (s *Service) GetPort(
 	ctx context.Context,
 	stationID uuid.UUID,

@@ -25,6 +25,11 @@ type ChargingStation struct {
 	CreatedAt time.Time
 }
 
+type ChargingStationDetails struct {
+	ChargingStation
+	Ports []ChargingPort
+}
+
 func NewChargingStation(id uuid.UUID, name, address string) *ChargingStation {
 	return &ChargingStation{
 		ID:        id,

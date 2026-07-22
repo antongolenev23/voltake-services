@@ -56,9 +56,11 @@ func (h *Handler) GetStations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	resp := dto.NewStationsResponse(stations)
+
 	w.Header().Set("Content-Type", "application/json")
 
-	if err := json.NewEncoder(w).Encode(dto.NewStationsResponse(stations)); err != nil {
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		log.Error("failed to encode response", slog.String("error", err.Error()))
 		http.Error(w, "internal error", http.StatusInternalServerError)
 	}
@@ -92,7 +94,7 @@ func (h *Handler) GetStation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := dto.NewStationResponse(station)
+	resp := dto.NewStationWithDetailsResponse(station)
 
 	w.Header().Set("Content-Type", "application/json")
 
