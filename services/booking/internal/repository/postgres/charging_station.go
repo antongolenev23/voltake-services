@@ -22,11 +22,11 @@ func (p *Postgres) GetStations(
 			id,
 			name,
 			address,
-			latitude,
-			longitude,
+			ST_Y(location::geometry) AS latitude,
+			ST_X(location::geometry) AS longitude,
 			created_at
 		FROM charging_stations
-		ORDER BY id
+		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2
 	`
 
@@ -34,7 +34,6 @@ func (p *Postgres) GetStations(
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
-
 	defer rows.Close()
 
 	stations := make([]domain.ChargingStation, 0)
@@ -42,16 +41,71 @@ func (p *Postgres) GetStations(
 	for rows.Next() {
 		var station domain.ChargingStation
 
-		err := rows.Scan(
+		if err := rows.Scan(
 			&station.ID,
 			&station.Name,
 			&station.Address,
 			&station.Latitude,
 			&station.Longitude,
 			&station.CreatedAt,
-		)
+		); err != nil {
+			return nil, fmt.Errorf("%s: %w", op, err)
+		}
 
-		if err != nil {
+		stations = append(stations, station)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return stations, nil
+}
+
+func (p *Postgres) GetNearbyStations(
+	ctx context.Context,
+	lat, lng, radius float64,
+	limit, offset int,
+) ([]domain.ChargingStation, error) {
+	const op = "postgres.GetNearbyStations"
+
+	const query = `
+		SELECT
+			id,
+			name,
+			address,
+			ST_Y(location::geometry) AS latitude,
+			ST_X(location::geometry) AS longitude,
+			created_at
+		FROM charging_stations
+		WHERE ST_DWithin(
+			location,
+			ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+			$3 * 1000
+		)
+		ORDER BY location <-> ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
+		LIMIT $4 OFFSET $5
+	`
+
+	rows, err := p.db.Query(ctx, query, lng, lat, radius, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+	defer rows.Close()
+
+	stations := make([]domain.ChargingStation, 0)
+
+	for rows.Next() {
+		var station domain.ChargingStation
+
+		if err := rows.Scan(
+			&station.ID,
+			&station.Name,
+			&station.Address,
+			&station.Latitude,
+			&station.Longitude,
+			&station.CreatedAt,
+		); err != nil {
 			return nil, fmt.Errorf("%s: %w", op, err)
 		}
 

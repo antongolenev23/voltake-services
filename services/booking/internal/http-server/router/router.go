@@ -43,7 +43,6 @@ func New(h *handler.Handler, cfg *config.ConfigJWT) *chi.Mux {
 
 		r.Get("/{stationID}", h.GetStation)
 		r.Get("/", h.GetStations)
-		// r.Get("/nearby", h.GetNearbyStations)
 
 		r.Group(func(r chi.Router) {
 			r.Use(appmiddleware.Auth(cfg.Secret), appmiddleware.IsAdmin)

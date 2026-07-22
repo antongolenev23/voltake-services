@@ -18,6 +18,11 @@ var ErrRequestBodyTooLarge = errors.New("request body too large")
 
 type StationsProvider interface {
 	GetStations(ctx context.Context, limit, offset int) ([]domain.ChargingStation, error)
+	GetNearbyStations(
+		ctx context.Context,
+		lat, lng, radius float64,
+		limit, offset int,
+	) ([]domain.ChargingStation, error)
 	GetStation(ctx context.Context, id uuid.UUID) (domain.ChargingStation, error)
 	CreateStation(ctx context.Context, station domain.ChargingStation) (domain.ChargingStation, error)
 	UpdateStation(ctx context.Context, station domain.ChargingStation) (domain.ChargingStation, error)

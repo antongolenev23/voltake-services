@@ -23,27 +23,44 @@ func (h *Handler) GetStations(w http.ResponseWriter, r *http.Request) {
 	const op = "handler.GetStations"
 	log := logger.WithRequestContext(r.Context(), h.Log, op)
 
-	limit, offset := parseLimitAndOffset(r.URL.Query())
+	q := r.URL.Query()
+	limit, offset := parseLimitAndOffset(q)
+
+	geo, err := parseGeoParams(q)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var stations []domain.ChargingStation
 
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
-	stations, err := h.service.GetStations(ctx, limit, offset)
+	if geo == nil {
+		stations, err = h.service.GetStations(ctx, limit, offset)
+	} else {
+		stations, err = h.service.GetNearbyStations(
+			ctx,
+			geo.Lat,
+			geo.Lng,
+			geo.Radius,
+			limit,
+			offset,
+		)
+	}
+
 	if err != nil {
 		log.Error("failed to get charging stations", slog.String("error", err.Error()))
 		http.Error(w, "failed to get charging stations", http.StatusInternalServerError)
 		return
 	}
 
-	resp := dto.NewStationsResponse(stations)
-
 	w.Header().Set("Content-Type", "application/json")
 
-	err = json.NewEncoder(w).Encode(resp)
-	if err != nil {
+	if err := json.NewEncoder(w).Encode(dto.NewStationsResponse(stations)); err != nil {
 		log.Error("failed to encode response", slog.String("error", err.Error()))
 		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
 	}
 }
 
@@ -247,4 +264,48 @@ func parseLimitAndOffset(values url.Values) (int, int) {
 	}
 
 	return limit, offset
+}
+
+type geoParams struct {
+	Lat    float64
+	Lng    float64
+	Radius float64
+}
+
+func parseGeoParams(q url.Values) (*geoParams, error) {
+	latStr := q.Get("lat")
+	lngStr := q.Get("lng")
+
+	if latStr == "" && lngStr == "" {
+		return nil, nil
+	}
+
+	if latStr == "" || lngStr == "" {
+		return nil, errors.New("lat and lng must be provided together")
+	}
+
+	lat, err := strconv.ParseFloat(latStr, 64)
+	if err != nil {
+		return nil, errors.New("invalid lat")
+	}
+
+	lng, err := strconv.ParseFloat(lngStr, 64)
+	if err != nil {
+		return nil, errors.New("invalid lng")
+	}
+
+	radius := 10.0
+	if radiusStr := q.Get("radius"); radiusStr != "" {
+		r, err := strconv.ParseFloat(radiusStr, 64)
+		if err != nil || r <= 0 || r > 100 {
+			return nil, errors.New("radius must be between 1 and 100 km")
+		}
+		radius = r
+	}
+
+	return &geoParams{
+		Lat:    lat,
+		Lng:    lng,
+		Radius: radius,
+	}, nil
 }
