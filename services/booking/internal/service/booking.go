@@ -15,12 +15,12 @@ func (s *Service) CreateBooking(
 ) (domain.Booking, error) {
 	const op = "service.CreateBooking"
 
-	if err := booking.Validate(s.cfg.MinDuration, s.cfg.MaxDuration); err != nil {
+	if err := booking.Validate(s.cfg.Booking.MinDuration, s.cfg.Booking.MaxDuration); err != nil {
 		return domain.Booking{}, fmt.Errorf("%s: %w", op, err)
 	}
 
 	booking.ReservedUntil = booking.EndTime.Add(
-		s.cfg.Buffer,
+		s.cfg.Booking.Buffer,
 	)
 
 	created, err := s.repository.CreateBooking(ctx, booking)

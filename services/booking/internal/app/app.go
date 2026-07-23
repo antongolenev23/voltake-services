@@ -28,6 +28,7 @@ type App struct {
 	httpServer *http.Server
 	authClient *authclient.Client
 
+	bookingExpireWorker   *worker.BookingExpire
 	bookingCompleteWorker *worker.BookingComplete
 }
 
@@ -50,10 +51,11 @@ func New(cfg *config.Config, log *slog.Logger) *App {
 	}
 
 	repository := postgres.New(pgxpool)
-	service := service.New(repository, &cfg.Booking)
+	service := service.New(repository, &cfg.DomainRules)
 	handlerHTTP := handler.New(service, authClient, log)
 
-	bookingCompleteWorker := worker.NewBookingWorker(repository)
+	bookingExpireWorker := worker.NewBookingExpireWorker(repository, cfg)
+	bookingCompleteWorker := worker.NewBookingCompleteWorker(repository, &cfg.Worker.BookingComplete)
 
 	r := router.New(handlerHTTP, &cfg.JWT)
 
@@ -71,6 +73,7 @@ func New(cfg *config.Config, log *slog.Logger) *App {
 		db:                    pgxpool,
 		httpServer:            server,
 		authClient:            authClient,
+		bookingExpireWorker:   bookingExpireWorker,
 		bookingCompleteWorker: bookingCompleteWorker,
 	}
 
@@ -85,6 +88,7 @@ func (a *App) Run() {
 
 	a.runServer()
 
+	a.bookingExpireWorker.Start(ctx, a.log)
 	a.bookingCompleteWorker.Start(ctx, a.log)
 
 	defer stop()

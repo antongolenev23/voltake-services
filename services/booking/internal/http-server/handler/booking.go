@@ -183,8 +183,8 @@ func (h *Handler) CancelBooking(
 	booking, err := h.service.CancelBooking(ctx, userID, bookingID)
 
 	if err != nil {
-		if errors.Is(err, domain.ErrBookingNotFound) {
-			http.Error(w, "booking not found", http.StatusNotFound)
+		if errors.Is(err, domain.ErrBookingCannotBeCancelled) {
+			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}
 

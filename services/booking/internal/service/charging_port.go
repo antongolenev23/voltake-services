@@ -60,14 +60,14 @@ func (s *Service) GetPortAvailability(
 	}
 
 	for i := range bookings {
-		bookings[i].Start = bookings[i].Start.Add(-s.cfg.Buffer)
+		bookings[i].Start = bookings[i].Start.Add(-s.cfg.Booking.Buffer)
 	}
 
 	return calculateAvailableSlots(
 		dayStart,
 		dayEnd,
 		bookings,
-		s.cfg.MinDuration,
+		s.cfg.Booking.MinDuration,
 	), nil
 }
 

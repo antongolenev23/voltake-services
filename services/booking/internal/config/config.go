@@ -15,7 +15,8 @@ type Config struct {
 	HTTPServer  ConfigHTTPServer  `yaml:"http_server"`
 	AuthService ConfigAuthService `yaml:"auth_service"`
 	JWT         ConfigJWT
-	Booking     BookingConfig `yaml:"booking"`
+	DomainRules ConfigDomainRules `yaml:"domain_rules"`
+	Worker      ConfigWorker      `yaml:"worker"`
 }
 
 type ConfigRepository struct {
@@ -43,10 +44,28 @@ type ConfigJWT struct {
 	Secret string        `env:"JWT_SECRET" env-required:"true"`
 }
 
+type ConfigWorker struct {
+	BookingExpire   BookingExpireWorker   `yaml:"booking_expire_worker"`
+	BookingComplete BookingCompleteWorker `yaml:"booking_complete_worker"`
+}
+
+type BookingExpireWorker struct {
+	Interval time.Duration `yaml:"interval" env-default:"30s"`
+}
+
+type BookingCompleteWorker struct {
+	Interval time.Duration `yaml:"interval" env-default:"30s"`
+}
+
+type ConfigDomainRules struct {
+	Booking BookingConfig `yaml:"booking"`
+}
+
 type BookingConfig struct {
-	MinDuration time.Duration `yaml:"min_duration" env-default:"30m"`
-	MaxDuration time.Duration `yaml:"max_duration" env-default:"4h"`
-	Buffer      time.Duration `yaml:"buffer" env-default:"10m"`
+	MinDuration    time.Duration `yaml:"min_duration" env-default:"30m"`
+	MaxDuration    time.Duration `yaml:"max_duration" env-default:"4h"`
+	Buffer         time.Duration `yaml:"buffer" env-default:"10m"`
+	CheckInTimeout time.Duration `yaml:"check_in_timeout" env-default:"15m"`
 }
 
 func MustLoad() *Config {

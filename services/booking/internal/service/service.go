@@ -41,12 +41,12 @@ type Repository interface {
 
 type Service struct {
 	repository Repository
-	cfg        *config.BookingConfig
+	cfg        *config.ConfigDomainRules
 }
 
 func New(
 	repository Repository,
-	cfg *config.BookingConfig,
+	cfg *config.ConfigDomainRules,
 ) *Service {
 	return &Service{
 		repository: repository,

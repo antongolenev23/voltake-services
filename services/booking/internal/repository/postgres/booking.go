@@ -30,7 +30,7 @@ func (p *Postgres) CreateBooking(
 		SELECT is_active
 		FROM charging_ports
 		WHERE id = $1
-		FOR UPDATE
+		FOR SHARE
 	`, booking.PortID).Scan(&isActive)
 
 	if err != nil {
@@ -263,7 +263,7 @@ func (p *Postgres) CancelBooking(
 			updated_at = NOW()
 		WHERE id = $1
 		AND user_id = $2
-		AND status != 'completed'
+		AND status = 'booked'
 		RETURNING
 			id,
 			user_id,
@@ -295,7 +295,7 @@ func (p *Postgres) CancelBooking(
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return domain.Booking{}, fmt.Errorf("%s: %w", op, domain.ErrBookingNotFound)
+			return domain.Booking{}, fmt.Errorf("%s: %w", op, domain.ErrBookingCannotBeCancelled)
 		}
 
 		return domain.Booking{}, fmt.Errorf("%s: %w", op, err)

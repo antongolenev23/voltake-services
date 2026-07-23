@@ -4,25 +4,32 @@ import (
 	"context"
 	"log/slog"
 	"time"
+
+	"github.com/antongolenev23/voltake-services/services/booking/internal/config"
 )
 
-type BookingRepository interface {
-	CompleteExpiredBookings(ctx context.Context) (int64, error)
+type BookingCompleteRepository interface {
+	CompleteActiveBookings(ctx context.Context) (int64, error)
 }
 
 type BookingComplete struct {
-	repo BookingRepository
+	repo BookingCompleteRepository
+	cfg  *config.BookingCompleteWorker
 }
 
-func NewBookingWorker(repo BookingRepository) *BookingComplete {
+func NewBookingCompleteWorker(
+	repo BookingCompleteRepository,
+	cfg *config.BookingCompleteWorker,
+) *BookingComplete {
 	return &BookingComplete{
 		repo: repo,
+		cfg:  cfg,
 	}
 }
 
 func (w *BookingComplete) Start(ctx context.Context, log *slog.Logger) {
 
-	ticker := time.NewTicker(time.Minute)
+	ticker := time.NewTicker(w.cfg.Interval)
 	defer ticker.Stop()
 
 	log.Info("booking complete worker started")
@@ -32,10 +39,10 @@ func (w *BookingComplete) Start(ctx context.Context, log *slog.Logger) {
 
 		case <-ticker.C:
 
-			count, err := w.repo.CompleteExpiredBookings(ctx)
+			count, err := w.repo.CompleteActiveBookings(ctx)
 			if err != nil {
 				log.Error(
-					"complete expired bookings failed",
+					"complete active bookings failed",
 					"error",
 					err,
 				)
@@ -44,7 +51,11 @@ func (w *BookingComplete) Start(ctx context.Context, log *slog.Logger) {
 			}
 
 			if count > 0 {
-				log.Info("bookings completed", "count", count)
+				log.Info(
+					"bookings completed",
+					"count",
+					count,
+				)
 			}
 
 		case <-ctx.Done():
